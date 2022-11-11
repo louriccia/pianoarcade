@@ -9,12 +9,12 @@ PShape rightKey;
 PShape midKey;
 PShape midKeyRight;
 PShape midKeyLeft;
-int globalNote = 0;
 ArrayList<Key> keys = new ArrayList<Key>();
 MidiBus myBus;
 
-int midiDevice  = 1;
-float keyLength = 100;
+int midiINDevice  = 3;
+int midiOUTDevice = 6;
+float keyLength = 200;
 float blackWidth = 20;
 float blackLength = .6;
 float blackIntrude = .6;
@@ -22,7 +22,7 @@ float blackIntrude = .6;
 void setup() {
   size(1600, 400);
   MidiBus.list();
-  myBus = new MidiBus(this, midiDevice, 1);
+  myBus = new MidiBus(this, midiINDevice, midiOUTDevice);
   for (int i = 0; i < 88; i ++) {
     keys.add(new Key());
   }
@@ -60,7 +60,7 @@ void setup() {
   midKey.vertex(blackWidth*(1-blackIntrude), keyLength*blackLength);
   midKey.endShape(CLOSE);
   midKey.disableStyle();
-  
+
   midKeyRight = createShape();
   midKeyRight.beginShape();
   midKeyRight.vertex(blackWidth*.5, 0);
@@ -73,7 +73,7 @@ void setup() {
   midKeyRight.vertex(blackWidth*.5, keyLength*blackLength);
   midKeyRight.endShape(CLOSE);
   midKeyRight.disableStyle();
-  
+
   midKeyLeft = createShape();
   midKeyLeft.beginShape();
   midKeyLeft.vertex(blackWidth*(1-blackIntrude), 0);
@@ -95,18 +95,27 @@ void draw() {
     Key k = keys.get(i);
     k.render(i);
   }
+  if (frameCount % 10 == 0) {
+    myBus.sendMessage(0xB0, 0, 64, 64);
+    int randomNote = (int)random(80);
+    myBus.sendNoteOn(0, randomNote, 50); //channel 0 should work
+    keys.get(randomNote).Press(10);
+  }
 }
 
 void midiMessage(MidiMessage message, long timestamp, String bus_name) {
+  int unk = (int)(message.getMessage()[0] & 0xFF) ;
   int note = (int)(message.getMessage()[1] & 0xFF) ;
   int vel = (int)(message.getMessage()[2] & 0xFF);
   int n = note - 21;
-  Key k = keys.get(n);
-  println(n % 12);
-  if (vel == 100) {
-    k.Press();
-  } else {
-    k.unPress();
+  if (unk == 144 || unk == 128) {
+    Key k = keys.get(n);
+    if (unk == 144) {
+      k.Press(vel);
+    } else if (unk == 128) {
+      k.unPress();
+    }
   }
+  println(unk);
   println("Bus " + bus_name + ": Note "+ note + ", vel " + vel);
 }

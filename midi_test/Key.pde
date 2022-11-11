@@ -1,4 +1,5 @@
 class Key {
+  float velocity = 0;
   Boolean on = false;
   PShape keyShape;
   IntDict whitemap = new IntDict(new Object[][] {
@@ -20,8 +21,9 @@ class Key {
   int[] black_notes = { 1, 4, 6, 9, 11 };
   int[] white_notes = {0, 2, 3, 5, 7, 8, 10};
 
-  void Press() {
+  void Press(int vel) {
     on = true;
+    velocity = vel;
   }
   void unPress() {
     on = false;
@@ -32,6 +34,9 @@ class Key {
       if (note%12 == black_notes[b]) {
         black = true;
       }
+    }
+    if(velocity > 0){
+     velocity -= 0.5; 
     }
     int o = note % 12;
     int offset = 0;
@@ -54,19 +59,19 @@ class Key {
     noStroke();
     if (black == true) {
       if (on == true) {
-        fill(0, 0, 255);
+        fill(0, 0, velocity*2);
       } else {
         fill(0);
       }
-      rect((note-5*floor(note/12) - offset)*width/52 - blackadjust.get(str(o)), 300, blackWidth, blackLength*keyLength);
+      rect((note-5*floor(note/12) - offset)*width/52 - blackadjust.get(str(o)), height - keyLength, blackWidth, blackLength*keyLength);
     } else {
       if (on == true) {
-        fill(0, 0, 255);
+        fill(255-(velocity *2), 255 - (velocity *2), 255);
       } else {
         fill(255);
       }
       //rect((note-5*floor(note/12) - offset)*width/52, 300, width/52, 100);
-      shape(keyShape, (note-5*floor(note/12) - offset)*width/52, 300);
+      shape(keyShape, (note-5*floor(note/12) - offset)*width/52, height - keyLength);
     }
   }
 }
