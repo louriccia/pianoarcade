@@ -18,7 +18,7 @@ float keyLength = 200;
 float blackWidth = 20;
 float blackLength = .6;
 float blackIntrude = .6;
-
+int instrument = 0;
 float colorPickerY = 0;
 boolean sustain = false;
 int keysPressed = 0;
@@ -101,10 +101,12 @@ void draw() {
     k.render(i);
   }
   if (frameCount % 10 == 0) {
-    myBus.sendMessage(0xB0, 0, 64, 64);
+    //myBus.sendMessage(0xC0,  0, instrument, 00); //changes instrument
+    myBus.sendMessage(0xC1,  0, instrument, 00);
+    instrument ++;
     int randomNote = (int)random(80);
-    //myBus.sendNoteOn(0, randomNote, 50); //channel 0 should work
-    //keys.get(randomNote).Press(10);
+    //myBus.sendNoteOn(0, randomNote, 60); //channel 0 should work
+    //keys.get(randomNote).Press(60);
   }
   colorMode(HSB);
   fill(255*(frameCount%(height - keyLength))/(height - keyLength), 255, 255);
@@ -125,7 +127,9 @@ void midiMessage(MidiMessage message, long timestamp, String bus_name) {
     if (unk == 144) {
       k.Press(vel);
       keysPressed++;
+      myBus.sendNoteOn(0, n+21, vel);
     } else if (unk == 128) {
+      myBus.sendNoteOff(0, n+21, vel);
       k.unPress();
     }
   } else if (unk == 176){

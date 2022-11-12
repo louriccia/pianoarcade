@@ -87,7 +87,11 @@ class Key {
       shape(keyShape, (note-5*floor(note/12) - offset)*width/52, height - keyLength);
     }
     if (on) {
+      if(black){
       circle((note-5*floor(note/12) - offset)* width/52, height - keyLength - velocity*5, width/50);
+      } else {
+        circle((note-5*floor(note/12) - offset)* width/52 + width/104, height - keyLength - velocity*5, width/50);
+      }
     }
   }
 }
