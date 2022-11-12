@@ -19,9 +19,14 @@ float blackWidth = 20;
 float blackLength = .6;
 float blackIntrude = .6;
 
+float colorPickerY = 0;
+boolean sustain = false;
+int keysPressed = 0;
+
 void setup() {
-  size(1600, 400);
+  size(1600, 800);
   MidiBus.list();
+  background(0);
   myBus = new MidiBus(this, midiINDevice, midiOUTDevice);
   for (int i = 0; i < 88; i ++) {
     keys.add(new Key());
@@ -98,9 +103,16 @@ void draw() {
   if (frameCount % 10 == 0) {
     myBus.sendMessage(0xB0, 0, 64, 64);
     int randomNote = (int)random(80);
-    myBus.sendNoteOn(0, randomNote, 50); //channel 0 should work
-    keys.get(randomNote).Press(10);
+    //myBus.sendNoteOn(0, randomNote, 50); //channel 0 should work
+    //keys.get(randomNote).Press(10);
   }
+  colorMode(HSB);
+  fill(255*(frameCount%(height - keyLength))/(height - keyLength), 255, 255);
+  rect(0, frameCount%(height-keyLength), 5, 1);
+  fill(0);
+  rect(5, 0, 10, height - keyLength);
+  fill(255);
+  circle(8, colorPickerY, 5);
 }
 
 void midiMessage(MidiMessage message, long timestamp, String bus_name) {
@@ -112,9 +124,27 @@ void midiMessage(MidiMessage message, long timestamp, String bus_name) {
     Key k = keys.get(n);
     if (unk == 144) {
       k.Press(vel);
+      keysPressed++;
     } else if (unk == 128) {
       k.unPress();
     }
+  } else if (unk == 176){
+     if(vel == 127){
+        sustain = true;
+     } else if (vel == 0){
+        sustain = false;
+        for(int i = 0; i < keys.size(); i++){
+          keys.get(i).unSustain();
+        }
+     }
+  } else if (unk == 224){
+    if(vel < 64){
+      colorPickerY += (64 - vel)/2;
+    } else {
+      colorPickerY -= (vel - 64)/2;
+    }
+    colorPickerY = max(0, colorPickerY);
+    colorPickerY = min(colorPickerY, height - keyLength);
   }
   println(unk);
   println("Bus " + bus_name + ": Note "+ note + ", vel " + vel);

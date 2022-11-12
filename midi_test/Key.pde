@@ -1,6 +1,8 @@
 class Key {
   float velocity = 0;
+  float initialVelocity = 0;
   Boolean on = false;
+  Boolean sustained = false;
   PShape keyShape;
   IntDict whitemap = new IntDict(new Object[][] {
     { "0", 0 },
@@ -24,9 +26,20 @@ class Key {
   void Press(int vel) {
     on = true;
     velocity = vel;
+    initialVelocity = vel;
   }
   void unPress() {
-    on = false;
+    if (!sustain) {
+      on = false;
+    } else {
+      sustained = true; 
+    }
+  }
+  void unSustain() {
+    if (sustained) {
+      sustained = false;
+      on = false;
+    }
   }
   void render(int note) {
     Boolean black = false;
@@ -35,8 +48,8 @@ class Key {
         black = true;
       }
     }
-    if(velocity > 0){
-     velocity -= 0.5; 
+    if (velocity > 0) {
+      velocity -= 0.20;
     }
     int o = note % 12;
     int offset = 0;
@@ -59,19 +72,22 @@ class Key {
     noStroke();
     if (black == true) {
       if (on == true) {
-        fill(0, 0, velocity*2);
+        fill(0, 0, velocity*3);
       } else {
         fill(0);
       }
       rect((note-5*floor(note/12) - offset)*width/52 - blackadjust.get(str(o)), height - keyLength, blackWidth, blackLength*keyLength);
     } else {
       if (on == true) {
-        fill(255-(velocity *2), 255 - (velocity *2), 255);
+        fill((keysPressed%255), 255, 255*(velocity/128));
       } else {
         fill(255);
       }
       //rect((note-5*floor(note/12) - offset)*width/52, 300, width/52, 100);
       shape(keyShape, (note-5*floor(note/12) - offset)*width/52, height - keyLength);
+    }
+    if (on) {
+      circle((note-5*floor(note/12) - offset)* width/52, height - keyLength - velocity*5, width/50);
     }
   }
 }
