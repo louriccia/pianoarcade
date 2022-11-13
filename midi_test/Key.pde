@@ -4,6 +4,8 @@ class Key {
   Boolean on = false;
   Boolean sustained = false;
   PShape keyShape;
+  int sat = 0;
+  int duration = 0;
   IntDict whitemap = new IntDict(new Object[][] {
     { "0", 0 },
     { "2", 1 },
@@ -27,21 +29,27 @@ class Key {
     on = true;
     velocity = vel;
     initialVelocity = vel;
+    sat = 121 + (int)random(124);
   }
   void unPress() {
     if (!sustain) {
       on = false;
+      duration = 0;
     } else {
-      sustained = true; 
+      sustained = true;
     }
   }
   void unSustain() {
     if (sustained) {
       sustained = false;
       on = false;
+      duration = 0;
     }
   }
   void render(int note) {
+    if (on) {
+      duration +=velocity;
+    }
     Boolean black = false;
     for (int b = 0; b < black_notes.length; b++) {
       if (note%12 == black_notes[b]) {
@@ -79,7 +87,7 @@ class Key {
       rect((note-5*floor(note/12) - offset)*width/52 - blackadjust.get(str(o)), height - keyLength, blackWidth, blackLength*keyLength);
     } else {
       if (on == true) {
-        fill((keysPressed%255), 255, 255*(velocity/128));
+        fill(((keysPressed*2)%255), sat, 255*(initialVelocity/80));
       } else {
         fill(255);
       }
@@ -87,10 +95,10 @@ class Key {
       shape(keyShape, (note-5*floor(note/12) - offset)*width/52, height - keyLength);
     }
     if (on) {
-      if(black){
-      circle((note-5*floor(note/12) - offset)* width/52, height - keyLength - velocity*5, width/50);
+      if (black) {
+        circle((note-5*floor(note/12) - offset)* width/52, height - keyLength - initialVelocity*7 + 100, sqrt(duration));
       } else {
-        circle((note-5*floor(note/12) - offset)* width/52 + width/104, height - keyLength - velocity*5, width/50);
+        circle((note-5*floor(note/12) - offset)* width/52 + width/104, height - keyLength - initialVelocity*7 + 100, sqrt(duration));
       }
     }
   }

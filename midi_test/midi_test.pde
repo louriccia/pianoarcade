@@ -23,8 +23,10 @@ float colorPickerY = 0;
 boolean sustain = false;
 int keysPressed = 0;
 
+int gameMode = 0;
+
 void setup() {
-  size(1600, 800);
+  size(1600, 1000);
   MidiBus.list();
   background(0);
   myBus = new MidiBus(this, midiINDevice, midiOUTDevice);
@@ -91,19 +93,28 @@ void setup() {
   midKeyLeft.vertex(blackWidth*(1-blackIntrude), keyLength*blackLength);
   midKeyLeft.endShape(CLOSE);
   midKeyLeft.disableStyle();
+
+  myBus.sendMessage(0xC1, 0, instrument, 00); //change instrument
+  myBus.sendMessage(0xC1, 1, 35, 00); //change instrument
 }
 
 void draw() {
   //background(0);
   //rect(globalNote*width/88, 300, 20, 100);
+  blendMode(SUBTRACT);
+  noStroke();
+  fill(255, 2);
+  if(frameCount%32 == 0){
+  rect(0, 0, width, height - keyLength);
+  }
+  blendMode(BLEND);
   for (int i = 0; i < keys.size(); i++) {
     Key k = keys.get(i);
     k.render(i);
   }
   if (frameCount % 10 == 0) {
-    //myBus.sendMessage(0xC0,  0, instrument, 00); //changes instrument
-    myBus.sendMessage(0xC1,  0, instrument, 00);
-    instrument ++;
+    //myBus.sendMessage(0xC1,  0, instrument, 00); //change instrument
+    //instrument ++;
     int randomNote = (int)random(80);
     //myBus.sendNoteOn(0, randomNote, 60); //channel 0 should work
     //keys.get(randomNote).Press(60);
@@ -124,25 +135,31 @@ void midiMessage(MidiMessage message, long timestamp, String bus_name) {
   int n = note - 21;
   if (unk == 144 || unk == 128) {
     Key k = keys.get(n);
-    if (unk == 144) {
+    if (unk == 144) { //NOTE ON
       k.Press(vel);
       keysPressed++;
       myBus.sendNoteOn(0, n+21, vel);
-    } else if (unk == 128) {
+      //myBus.sendNoteOn(1, n+21, vel);
+      if (n == 0) {
+        instrument++;
+        myBus.sendMessage(0xC1, 0, instrument, 00);
+      }
+    } else if (unk == 128) { // NOTE OFF
       myBus.sendNoteOff(0, n+21, vel);
       k.unPress();
     }
-  } else if (unk == 176){
-     if(vel == 127){
-        sustain = true;
-     } else if (vel == 0){
-        sustain = false;
-        for(int i = 0; i < keys.size(); i++){
-          keys.get(i).unSustain();
-        }
-     }
-  } else if (unk == 224){
-    if(vel < 64){
+  } else if (unk == 176) {
+    myBus.sendMessage(0xB0, 0, 0x40, vel);
+    if (vel == 127) {
+      sustain = true;
+    } else if (vel == 0) {
+      sustain = false;
+      for (int i = 0; i < keys.size(); i++) {
+        keys.get(i).unSustain();
+      }
+    }
+  } else if (unk == 224) {
+    if (vel < 64) {
       colorPickerY += (64 - vel)/2;
     } else {
       colorPickerY -= (vel - 64)/2;
