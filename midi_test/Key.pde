@@ -6,6 +6,7 @@ class Key {
   PShape keyShape;
   int sat = 0;
   int duration = 0;
+  int dur = 0;
   IntDict whitemap = new IntDict(new Object[][] {
     { "0", 0 },
     { "2", 1 },
@@ -35,6 +36,7 @@ class Key {
     if (!sustain) {
       on = false;
       duration = 0;
+      dur = 0;
     } else {
       sustained = true;
     }
@@ -44,11 +46,20 @@ class Key {
       sustained = false;
       on = false;
       duration = 0;
+      dur = 0;
+    }
+  }
+  void spawnBox(int note) {
+    if (dur != 0) {
+      Box p = new Box((note-5*floor(note/12))* width/52, height - keyLength - dur/2, width/52, dur);
+      boxes.add(p);
     }
   }
   void render(int note) {
+    rectMode(CORNER);
     if (on) {
       duration +=velocity;
+      dur ++;
     }
     Boolean black = false;
     for (int b = 0; b < black_notes.length; b++) {
@@ -80,26 +91,28 @@ class Key {
     noStroke();
     if (black == true) {
       if (on == true) {
-        fill(0, 0, velocity*3);
+        if (gameMode == 0) {
+          fill(0, 0, initialVelocity*3);
+          circle((note-5*floor(note/12) - offset)* width/52, height - keyLength - initialVelocity*7 + 100, sqrt(duration));
+        }
       } else {
         fill(0);
       }
       rect((note-5*floor(note/12) - offset)*width/52 - blackadjust.get(str(o)), height - keyLength, blackWidth, blackLength*keyLength);
     } else {
       if (on == true) {
-        fill(((keysPressed*2)%255), sat, 255*(initialVelocity/80));
+        if (gameMode == 0) {
+          fill(((keysPressed*2)%255), sat, 255*(initialVelocity/80));
+          circle((note-5*floor(note/12) - offset)* width/52 + width/104, height - keyLength - initialVelocity*7 + 100, sqrt(duration));
+        }
       } else {
         fill(255);
       }
-      //rect((note-5*floor(note/12) - offset)*width/52, 300, width/52, 100);
       shape(keyShape, (note-5*floor(note/12) - offset)*width/52, height - keyLength);
     }
-    if (on) {
-      if (black) {
-        circle((note-5*floor(note/12) - offset)* width/52, height - keyLength - initialVelocity*7 + 100, sqrt(duration));
-      } else {
-        circle((note-5*floor(note/12) - offset)* width/52 + width/104, height - keyLength - initialVelocity*7 + 100, sqrt(duration));
-      }
+    if (gameMode == 1 && on) {
+      fill(125);
+      rect((note-5*floor(note/12) - offset)*width/52, height - keyLength - dur, width/52, dur);
     }
   }
 }
