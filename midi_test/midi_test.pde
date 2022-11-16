@@ -17,6 +17,7 @@ ArrayList<Key> keys = new ArrayList<Key>();
 ArrayList<Boundary> boundaries;
 // A list for all of our rectangles
 ArrayList<Box> boxes;
+ArrayList<FloatList> queue;
 MidiBus myBus;
 
 int midiINDevice  = 3;
@@ -29,7 +30,7 @@ int instrument = 0;
 float colorPickerY = 0;
 boolean sustain = false;
 int keysPressed = 0;
-
+int activeNotes = 0;
 int gameMode = 1;
 
 void setup() {
@@ -40,10 +41,11 @@ void setup() {
   box2d = new Box2DProcessing(this);
   box2d.createWorld();
   // We are setting a custom gravity
-  box2d.setGravity(0, 20);
+  box2d.setGravity(0, 10);
 
   // Create ArrayLists
   boxes = new ArrayList<Box>();
+  queue = new ArrayList<FloatList>();
   boundaries = new ArrayList<Boundary>();
 
   // Add a bunch of fixed boundaries
@@ -135,20 +137,19 @@ void draw() {
     blendMode(BLEND);
   } else if (gameMode == 1) {
     background(0);
+    for(int i = 0; i < queue.size(); i ++){
+        Box p = new Box(queue.get(i).get(0), queue.get(i).get(1), queue.get(i).get(2), queue.get(i).get(3), queue.get(i).get(4), (keysPressed*2)%255);
+        boxes.add(p);
+    }
+    queue.clear();
   }
 
   // We must always step through time!
   box2d.step();
 
-  // Boxes fall from the top every so often
-  if (random(1) < 0.2) {
-    //Box p = new Box(width/2,30);
-    // boxes.add(p);
-  }
-
   // Display all the boundaries
   for (Boundary wall : boundaries) {
-    wall.display();
+    //wall.display();
   }
 
   // Display all the boxes
@@ -177,12 +178,12 @@ void draw() {
     //keys.get(randomNote).Press(60);
   }
   colorMode(HSB);
-  fill(255*(frameCount%(height - keyLength))/(height - keyLength), 255, 255);
-  rect(0, frameCount%(height-keyLength), 5, 1);
-  fill(0);
-  rect(5, 0, 10, height - keyLength);
-  fill(255);
-  circle(8, colorPickerY, 5);
+  //fill(255*(frameCount%(height - keyLength))/(height - keyLength), 255, 255);
+  //rect(0, frameCount%(height-keyLength), 5, 1);
+  //fill(0);
+  //rect(5, 0, 10, height - keyLength);
+  //fill(255);
+  //circle(8, colorPickerY, 5);
 }
 
 void midiMessage(MidiMessage message, long timestamp, String bus_name) {
@@ -195,6 +196,7 @@ void midiMessage(MidiMessage message, long timestamp, String bus_name) {
     if (unk == 144) { //NOTE ON
       k.Press(vel);
       keysPressed++;
+      activeNotes ++;
       myBus.sendNoteOn(0, n+21, vel);
       //myBus.sendNoteOn(1, n+21, vel);
       if (n == 0) {
@@ -202,12 +204,17 @@ void midiMessage(MidiMessage message, long timestamp, String bus_name) {
         myBus.sendMessage(0xC1, 0, instrument, 00);
       }
     } else if (unk == 128) { // NOTE OFF
-      myBus.sendNoteOff(0, n+21, vel);
-      
-      if (gameMode == 1) {
-        k.spawnBox(n);
+      try {
+        if (gameMode == 1) {
+          k.spawnBox(n);
+        }
+        k.unPress();
+        activeNotes --;
+        myBus.sendNoteOff(0, n+21, vel);
       }
-      k.unPress();
+      catch (Exception e){
+        println("there was an error");
+      }
     }
   } else if (unk == 176) {
     myBus.sendMessage(0xB0, 0, 0x40, vel);
@@ -228,6 +235,5 @@ void midiMessage(MidiMessage message, long timestamp, String bus_name) {
     colorPickerY = max(0, colorPickerY);
     colorPickerY = min(colorPickerY, height - keyLength);
   }
-  println(unk);
-  println("Bus " + bus_name + ": Note "+ note + ", vel " + vel);
+  //println(unk + ": Note "+ note + ", vel " + vel);
 }

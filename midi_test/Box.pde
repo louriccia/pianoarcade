@@ -10,11 +10,15 @@ class Box {
   Body body;
   float w;
   float h;
+  float iVV;
+  float bc;
 
   // Constructor
-  Box(float x, float y, float _w, float _h) {
+  Box(float x, float y, float _w, float _h, float _iVV, float box_color) {
     w = _w;
     h = max(2, min(_h, height/2));
+    bc = box_color;
+    iVV = _iVV;
     // Add the box to the box2d world
     makeBody(new Vec2(x, y), w, h);
   }
@@ -29,7 +33,7 @@ class Box {
     // Let's find the screen position of the particle
     Vec2 pos = box2d.getBodyPixelCoord(body);
     // Is it off the bottom of the screen?
-    if (pos.y < 0 || pos.x < 0 || pos.x > width) {
+    if (pos.y < 0 || pos.x < -20 || pos.x > width + 20) {
       killBody();
       return true;
     }
@@ -47,7 +51,7 @@ class Box {
     pushMatrix();
     translate(pos.x, pos.y);
     rotate(-a);
-    fill(175);
+    fill(bc, 255, 255);
     stroke(0);
     rect(0, 0, w, h);
     popMatrix();
@@ -55,13 +59,11 @@ class Box {
 
   // This function adds the rectangle to the box2d world
   void makeBody(Vec2 center, float w_, float h_) {
-    println(center, w_, h_);
     // Define a polygon (this is what we use for a rectangle)
     PolygonShape sd = new PolygonShape();
     float box2dW = box2d.scalarPixelsToWorld(w_/2);
     float box2dH = box2d.scalarPixelsToWorld(h_/2);
     sd.setAsBox(box2dW, box2dH);
-
     // Define a fixture
     FixtureDef fd = new FixtureDef();
     fd.shape = sd;
@@ -79,7 +81,7 @@ class Box {
     body.createFixture(fd);
 
     // Give it some initial random velocity
-    body.setLinearVelocity(new Vec2(random(-5, 5), random(2, 5)));
-    body.setAngularVelocity(random(-5, 5));
+    body.setLinearVelocity(new Vec2(0, iVV));
+    body.setAngularVelocity(random(-iVV/20, iVV/20));
   }
 }

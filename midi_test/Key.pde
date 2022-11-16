@@ -7,6 +7,7 @@ class Key {
   int sat = 0;
   int duration = 0;
   int dur = 0;
+  FloatList box_data;
   IntDict whitemap = new IntDict(new Object[][] {
     { "0", 0 },
     { "2", 1 },
@@ -51,15 +52,20 @@ class Key {
   }
   void spawnBox(int note) {
     if (dur != 0) {
-      Box p = new Box((note-5*floor(note/12))* width/52, height - keyLength - dur/2, width/52, dur);
-      boxes.add(p);
+      box_data = new FloatList();
+      box_data.append((note-5*floor(note/12))* width/52);
+      box_data.append(height - keyLength - dur/2);
+      box_data.append(width/52);
+      box_data.append(dur);
+      box_data.append(initialVelocity*2);
+      queue.add(box_data);
     }
   }
   void render(int note) {
     rectMode(CORNER);
     if (on) {
       duration +=velocity;
-      dur ++;
+      dur += 2;
     }
     Boolean black = false;
     for (int b = 0; b < black_notes.length; b++) {
