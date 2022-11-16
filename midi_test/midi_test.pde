@@ -4,6 +4,7 @@ import shiffman.box2d.*;
 import org.jbox2d.collision.shapes.*;
 import org.jbox2d.common.*;
 import org.jbox2d.dynamics.*;
+import org.jbox2d.dynamics.contacts.*;
 import themidibus.*; //Import the library
 import javax.sound.midi.MidiMessage;
 Box2DProcessing box2d;
@@ -20,8 +21,8 @@ ArrayList<Box> boxes;
 ArrayList<FloatList> queue;
 MidiBus myBus;
 
-int midiINDevice  = 3;
-int midiOUTDevice = 6;
+int midiINDevice  = 1;
+int midiOUTDevice = 3;
 float keyLength = 200;
 float blackWidth = 20;
 float blackLength = .6;
@@ -40,6 +41,9 @@ void setup() {
   // Initialize box2d physics and create the world
   box2d = new Box2DProcessing(this);
   box2d.createWorld();
+  
+   // Turn on collision listening!
+  box2d.listenForCollisions();
   // We are setting a custom gravity
   box2d.setGravity(0, 10);
 
@@ -50,6 +54,7 @@ void setup() {
 
   // Add a bunch of fixed boundaries
   boundaries.add(new Boundary(width/2, 0, width, 0));
+  boundaries.add(new Boundary(width/2, height - keyLength, width, 0));
   //boundaries.add(new Boundary(3*width/4,height-keyLength,width/2-50,10));
 
   MidiBus.list();
@@ -138,7 +143,7 @@ void draw() {
   } else if (gameMode == 1) {
     background(0);
     for(int i = 0; i < queue.size(); i ++){
-        Box p = new Box(queue.get(i).get(0), queue.get(i).get(1), queue.get(i).get(2), queue.get(i).get(3), queue.get(i).get(4), (keysPressed*2)%255);
+        Box p = new Box(queue.get(i).get(0), queue.get(i).get(1), queue.get(i).get(2), queue.get(i).get(3), queue.get(i).get(4), queue.get(i).get(5));
         boxes.add(p);
     }
     queue.clear();
@@ -236,4 +241,30 @@ void midiMessage(MidiMessage message, long timestamp, String bus_name) {
     colorPickerY = min(colorPickerY, height - keyLength);
   }
   //println(unk + ": Note "+ note + ", vel " + vel);
+}
+
+// Collision event functions!
+void beginContact(Contact cp) {
+  // Get both fixtures
+  Fixture f1 = cp.getFixtureA();
+  Fixture f2 = cp.getFixtureB();
+  // Get both bodies
+  Body b1 = f1.getBody();
+  Body b2 = f2.getBody();
+
+  // Get our objects that reference these bodies
+  Object o1 = b1.getUserData();
+  Object o2 = b2.getUserData();
+
+  if (o1.getClass() == Boundary.class && o2.getClass() == Box.class) {
+    Box p1 = (Box) o1;
+    p1.change();
+    Box p2 = (Box) o2;
+    p2.change();
+  }
+
+}
+
+// Objects stop touching each other
+void endContact(Contact cp) {
 }

@@ -39,6 +39,10 @@ class Box {
     }
     return false;
   }
+  
+  void change() {
+     bc = 128; 
+  }
 
   // Drawing the box
   void display() {
@@ -51,7 +55,11 @@ class Box {
     pushMatrix();
     translate(pos.x, pos.y);
     rotate(-a);
-    fill(bc, 255, 255);
+    if (bc == -1.0) {
+      fill(0, 0, 255);
+    } else {
+      fill(bc, 255, 255);
+    }
     stroke(0);
     rect(0, 0, w, h);
     popMatrix();

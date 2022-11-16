@@ -27,6 +27,23 @@ class Key {
   int[] black_notes = { 1, 4, 6, 9, 11 };
   int[] white_notes = {0, 2, 3, 5, 7, 8, 10};
 
+  Boolean black(int note) {
+    Boolean bl = false;
+    for (int b = 0; b < black_notes.length; b++) {
+      if (note%12 == black_notes[b]) {
+        bl = true;
+      }
+    }
+    return bl;
+  }
+  int getOffset(int note) {
+    int o = note % 12;
+    if (black(note)) {
+      return max(whitemap.get(str(o-1)), 0);
+    } else {
+      return max(whitemap.get(str(o)), 0);
+    }
+  }
   void Press(int vel) {
     on = true;
     velocity = vel;
@@ -51,35 +68,47 @@ class Key {
     }
   }
   void spawnBox(int note) {
+    
     if (dur != 0) {
       box_data = new FloatList();
-      box_data.append((note-5*floor(note/12))* width/52);
+      if (black(note)) {
+        box_data.append((note-5*floor(note/12) - getOffset(note))* width/52 - blackadjust.get(str(note%12)) + blackWidth/2);
+      } else {
+        box_data.append((note-5*floor(note/12) - getOffset(note))* width/52  + width/104);
+      }
       box_data.append(height - keyLength - dur/2);
-      box_data.append(width/52);
+      if (black(note)) {
+        box_data.append(blackWidth);
+      } else {
+        box_data.append(width/52);
+      }
       box_data.append(dur);
       box_data.append(initialVelocity*2);
+      if(black(note)){
+        box_data.append(-1);
+      } else {
+         box_data.append((keysPressed*2)%255); 
+      }
+      
       queue.add(box_data);
     }
   }
   void render(int note) {
     rectMode(CORNER);
+    noStroke();
+    Boolean blk = black(note);
+    int o = note % 12;
+    int offset = getOffset(note);
+    float note_x = (note-5*floor(note/12) - offset)* width/52;
+
     if (on) {
       duration +=velocity;
       dur += 2;
     }
-    Boolean black = false;
-    for (int b = 0; b < black_notes.length; b++) {
-      if (note%12 == black_notes[b]) {
-        black = true;
-      }
-    }
     if (velocity > 0) {
       velocity -= 0.20;
     }
-    int o = note % 12;
-    int offset = 0;
-    if (!black) {
-      offset = whitemap.get(str(o));
+    if (!blk) {
       if (note == 0 || o == 3 || o == 8) {
         keyShape = leftKey;
       } else if (o == 2 || o == 7) {
@@ -91,34 +120,40 @@ class Key {
       } else if (o == 0) {
         keyShape = midKeyRight;
       }
-    } else {
-      offset = whitemap.get(str(o-1));
-    }
-    noStroke();
-    if (black == true) {
-      if (on == true) {
-        if (gameMode == 0) {
-          fill(0, 0, initialVelocity*3);
-          circle((note-5*floor(note/12) - offset)* width/52, height - keyLength - initialVelocity*7 + 100, sqrt(duration));
-        }
-      } else {
-        fill(0);
-      }
-      rect((note-5*floor(note/12) - offset)*width/52 - blackadjust.get(str(o)), height - keyLength, blackWidth, blackLength*keyLength);
-    } else {
       if (on == true) {
         if (gameMode == 0) {
           fill(((keysPressed*2)%255), sat, 255*(initialVelocity/80));
-          circle((note-5*floor(note/12) - offset)* width/52 + width/104, height - keyLength - initialVelocity*7 + 100, sqrt(duration));
+          circle(note_x + width/104, height - keyLength - initialVelocity*7 + 100, sqrt(duration));
+        } else if (gameMode == 1) {
+          fill(((keysPressed*2)%255), 255, 255);
         }
       } else {
         fill(255);
       }
-      shape(keyShape, (note-5*floor(note/12) - offset)*width/52, height - keyLength);
+      shape(keyShape, note_x, height - keyLength);
+    } else {
+      if (on == true) {
+        if (gameMode == 0) {
+          fill(0, 0, initialVelocity*3);
+          circle(note_x, height - keyLength - initialVelocity*7 + 100, sqrt(duration));
+        } else if (gameMode == 1) {
+          fill(255, 0, 255);
+        }
+      } else {
+        fill(0);
+      }
+      rect(note_x - blackadjust.get(str(o)), height - keyLength, blackWidth, blackLength*keyLength);
     }
+
     if (gameMode == 1 && on) {
       fill(125);
-      rect((note-5*floor(note/12) - offset)*width/52, height - keyLength - dur, width/52, dur);
+      if (black(note)) {
+        fill(255, 0, 255);
+        rect(note_x - blackadjust.get(str(o)), height - keyLength - dur, blackWidth, dur);
+      } else {
+        fill(((keysPressed*2)%255), 255, 255);
+        rect(note_x, height - keyLength - dur, width/52, dur);
+      }
     }
   }
 }
