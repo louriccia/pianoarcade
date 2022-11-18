@@ -12,6 +12,7 @@ class Boundary {
   float y;
   float w;
   float h;
+  boolean delete = false;
   
   // But we also have to make a body for box2d to know about it
   Body b;
@@ -39,6 +40,8 @@ class Boundary {
     
     // Attached the shape to the body using a Fixture
     b.createFixture(sd,1);
+    
+    b.setUserData(this);
   }
 
   // Draw the boundary, if it were at an angle we'd have to do something fancier
@@ -47,6 +50,10 @@ class Boundary {
     stroke(0);
     rectMode(CENTER);
     rect(x,y,w,h);
+  }
+  
+  void delete() {
+     delete = true; 
   }
 
 }

@@ -7,6 +7,9 @@ import org.jbox2d.dynamics.*;
 import org.jbox2d.dynamics.contacts.*;
 import themidibus.*; //Import the library
 import javax.sound.midi.MidiMessage;
+import spout.*;
+
+Spout spout;
 Box2DProcessing box2d;
 PShape leftKey;
 PShape rightKey;
@@ -21,23 +24,24 @@ ArrayList<Box> boxes;
 ArrayList<FloatList> queue;
 MidiBus myBus;
 
-int midiINDevice  = 1;
-int midiOUTDevice = 3;
+int midiINDevice  = 3;
+int midiOUTDevice = 6;
 float keyLength = 200;
 float blackWidth = 20;
 float blackLength = .6;
 float blackIntrude = .6;
 int instrument = 0;
-float colorPickerY = 0;
+float pitchBender = 64;
 boolean sustain = false;
 int keysPressed = 0;
 int activeNotes = 0;
 int gameMode = 1;
 
 void setup() {
-  size(1600, 1000);
+  size(1600, 1000, P3D);
   smooth();
-
+  spout = new Spout(this);
+  spout.createSender("midi_test", width, height);
   // Initialize box2d physics and create the world
   box2d = new Box2DProcessing(this);
   box2d.createWorld();
@@ -188,7 +192,8 @@ void draw() {
   //fill(0);
   //rect(5, 0, 10, height - keyLength);
   //fill(255);
-  //circle(8, colorPickerY, 5);
+  //circle(8, pitchBender, 5);
+  spout.sendTexture();
 }
 
 void midiMessage(MidiMessage message, long timestamp, String bus_name) {
@@ -199,7 +204,7 @@ void midiMessage(MidiMessage message, long timestamp, String bus_name) {
   if (unk == 144 || unk == 128) {
     Key k = keys.get(n);
     if (unk == 144) { //NOTE ON
-      k.Press(vel);
+      k.Press(n, vel);
       keysPressed++;
       activeNotes ++;
       myBus.sendNoteOn(0, n+21, vel);
@@ -210,10 +215,10 @@ void midiMessage(MidiMessage message, long timestamp, String bus_name) {
       }
     } else if (unk == 128) { // NOTE OFF
       try {
-        if (gameMode == 1) {
-          k.spawnBox(n);
-        }
-        k.unPress();
+        //if (gameMode == 1) {
+        // k.spawnBox(n);
+        //}
+        k.unPress(n);
         activeNotes --;
         myBus.sendNoteOff(0, n+21, vel);
       }
@@ -221,24 +226,28 @@ void midiMessage(MidiMessage message, long timestamp, String bus_name) {
         println("there was an error");
       }
     }
-  } else if (unk == 176) {
+  } else if (unk == 176) { //SUSTAIN
     myBus.sendMessage(0xB0, 0, 0x40, vel);
     if (vel == 127) {
       sustain = true;
     } else if (vel == 0) {
       sustain = false;
       for (int i = 0; i < keys.size(); i++) {
-        keys.get(i).unSustain();
+        keys.get(i).unSustain(i);
       }
     }
-  } else if (unk == 224) {
+  } else if (unk == 224) { //PITCH BENDER
     if (vel < 64) {
-      colorPickerY += (64 - vel)/2;
+      //pitchBender += (64 - vel)/2;
     } else {
-      colorPickerY -= (vel - 64)/2;
+      //pitchBender -= (vel - 64)/2;
     }
-    colorPickerY = max(0, colorPickerY);
-    colorPickerY = min(colorPickerY, height - keyLength);
+    pitchBender = vel;
+    //pitchBender = max(0, pitchBender);
+    //pitchBender = min(pitchBender, height - keyLength);
+    //println(pitchBender);
+    float gravity = map(pitchBender, 0, 125, -100, 100);
+    box2d.setGravity(0, gravity);
   }
   //println(unk + ": Note "+ note + ", vel " + vel);
 }

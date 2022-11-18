@@ -44,31 +44,18 @@ class Key {
       return max(whitemap.get(str(o)), 0);
     }
   }
-  void Press(int vel) {
+  void Press(int note, int vel) {
+    if(on){
+       spawnBox(note);
+    }
+    dur = 0;
     on = true;
     velocity = vel;
     initialVelocity = vel;
     sat = 121 + (int)random(124);
   }
-  void unPress() {
-    if (!sustain) {
-      on = false;
-      duration = 0;
-      dur = 0;
-    } else {
-      sustained = true;
-    }
-  }
-  void unSustain() {
-    if (sustained) {
-      sustained = false;
-      on = false;
-      duration = 0;
-      dur = 0;
-    }
-  }
+ 
   void spawnBox(int note) {
-    
     if (dur != 0) {
       box_data = new FloatList();
       if (black(note)) {
@@ -91,6 +78,30 @@ class Key {
       }
       
       queue.add(box_data);
+    }
+  }
+   void unPress(int note) {
+    if (!sustain) {
+      if (gameMode == 1) {
+         spawnBox(note);
+        }
+      on = false;
+      duration = 0;
+      dur = 0;
+      
+    } else {
+      sustained = true;
+    }
+  }
+  void unSustain(int note) {
+    if (sustained) {
+      if(gameMode == 1){
+        spawnBox(note);
+      }
+      sustained = false;
+      on = false;
+      duration = 0;
+      dur = 0;
     }
   }
   void render(int note) {

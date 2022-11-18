@@ -12,6 +12,7 @@ class Box {
   float h;
   float iVV;
   float bc;
+  boolean delete = false;
 
   // Constructor
   Box(float x, float y, float _w, float _h, float _iVV, float box_color) {
@@ -21,11 +22,16 @@ class Box {
     iVV = _iVV;
     // Add the box to the box2d world
     makeBody(new Vec2(x, y), w, h);
+    body.setUserData(this);
   }
 
   // This function removes the particle from the box2d world
   void killBody() {
     box2d.destroyBody(body);
+  }
+  
+  void delete() {
+    delete = true; 
   }
 
   // Is the particle ready for deletion?
