@@ -2,8 +2,11 @@
 // SimpleMidi.pde
 import shiffman.box2d.*;
 import org.jbox2d.collision.shapes.*;
+
 import org.jbox2d.common.*;
 import org.jbox2d.dynamics.*;
+import org.jbox2d.dynamics.joints.*;
+import org.jbox2d.collision.shapes.Shape;
 import org.jbox2d.dynamics.contacts.*;
 import themidibus.*; //Import the library
 import javax.sound.midi.MidiMessage;
@@ -22,10 +25,11 @@ ArrayList<Boundary> boundaries;
 // A list for all of our rectangles
 ArrayList<Box> boxes;
 ArrayList<FloatList> queue;
+//Spring spring;
 MidiBus myBus;
 
-int midiINDevice  = 3;
-int midiOUTDevice = 6;
+int midiINDevice  = 1;
+int midiOUTDevice = 5;
 float keyLength = 200;
 float blackWidth = 20;
 float blackLength = .6;
@@ -35,7 +39,11 @@ float pitchBender = 64;
 boolean sustain = false;
 int keysPressed = 0;
 int activeNotes = 0;
-int gameMode = 1;
+int gameMode = 2;
+
+float pyth(Vec2 vec) {
+  return sqrt(vec.x*vec.x + vec.y*vec.y);
+}
 
 void setup() {
   size(1600, 1000, P3D);
@@ -45,8 +53,8 @@ void setup() {
   // Initialize box2d physics and create the world
   box2d = new Box2DProcessing(this);
   box2d.createWorld();
-  
-   // Turn on collision listening!
+
+  // Turn on collision listening!
   box2d.listenForCollisions();
   // We are setting a custom gravity
   box2d.setGravity(0, 10);
@@ -56,9 +64,20 @@ void setup() {
   queue = new ArrayList<FloatList>();
   boundaries = new ArrayList<Boundary>();
 
+  int bnote = 0;
+  for (int i = 0; i < 52; i++) {
+    boundaries.add(new Boundary(width*i/52 + width/104, height - keyLength/2 - 10, width/52, keyLength, bnote)); //white note
+    bnote ++;
+    if (i % 7 != 1 && i % 7 != 4) {
+      boundaries.add(new Boundary(width*i/52 + width/52, height - keyLength + keyLength*blackLength/2-1, blackWidth, blackLength*keyLength, bnote)); //black note
+      bnote ++;
+    }
+  }
+
   // Add a bunch of fixed boundaries
-  boundaries.add(new Boundary(width/2, 0, width, 0));
-  boundaries.add(new Boundary(width/2, height - keyLength, width, 0));
+  boundaries.add(new Boundary(width/2, 0, width, 0, -1));
+  boundaries.add(new Boundary(width/2, height, width, 0, -1));
+
   //boundaries.add(new Boundary(3*width/4,height-keyLength,width/2-50,10));
 
   MidiBus.list();
@@ -128,8 +147,8 @@ void setup() {
   midKeyLeft.endShape(CLOSE);
   midKeyLeft.disableStyle();
 
-  myBus.sendMessage(0xC1, 0, instrument, 00); //change instrument
-  myBus.sendMessage(0xC1, 1, 35, 00); //change instrument
+  // myBus.sendMessage(0xC1, 0, instrument, 00); //change instrument
+  //myBus.sendMessage(0xC1, 1, 35, 00); //change instrument
 }
 
 void draw() {
@@ -146,9 +165,9 @@ void draw() {
     blendMode(BLEND);
   } else if (gameMode == 1) {
     background(0);
-    for(int i = 0; i < queue.size(); i ++){
-        Box p = new Box(queue.get(i).get(0), queue.get(i).get(1), queue.get(i).get(2), queue.get(i).get(3), queue.get(i).get(4), queue.get(i).get(5));
-        boxes.add(p);
+    for (int i = 0; i < queue.size(); i ++) {
+      Box p = new Box(queue.get(i).get(0), queue.get(i).get(1), queue.get(i).get(2), queue.get(i).get(3), queue.get(i).get(4), queue.get(i).get(5));
+      boxes.add(p);
     }
     queue.clear();
   }
@@ -158,7 +177,7 @@ void draw() {
 
   // Display all the boundaries
   for (Boundary wall : boundaries) {
-    //wall.display();
+    wall.display();
   }
 
   // Display all the boxes
@@ -213,6 +232,10 @@ void midiMessage(MidiMessage message, long timestamp, String bus_name) {
         instrument++;
         myBus.sendMessage(0xC1, 0, instrument, 00);
       }
+      if(gameMode == 2){
+        Boundary b = boundaries.get(n);
+        b.setVelocity(new Vec2(0, vel));
+      }
     } else if (unk == 128) { // NOTE OFF
       try {
         //if (gameMode == 1) {
@@ -222,7 +245,7 @@ void midiMessage(MidiMessage message, long timestamp, String bus_name) {
         activeNotes --;
         myBus.sendNoteOff(0, n+21, vel);
       }
-      catch (Exception e){
+      catch (Exception e) {
         println("there was an error");
       }
     }
@@ -266,14 +289,45 @@ void beginContact(Contact cp) {
   Object o2 = b2.getUserData();
 
   if (o1.getClass() == Boundary.class && o2.getClass() == Box.class) {
-    Box p1 = (Box) o1;
-    p1.change();
-    Box p2 = (Box) o2;
-    p2.change();
-  }
+    Boundary p1 = (Boundary) o1;
+    //p1.change();
 
+    float vel = pyth(b2.getLinearVelocity());
+    //println(b2.getLinearVelocity().toString(), vel);
+    Box p2 = (Box) o2;
+    int hitkey = p1.getKey();
+    if (p2.getAge() > 10 && hitkey < 88) {
+      //p2.change();
+      if (hitkey > -1) {
+        myBus.sendNoteOn(0, hitkey+21, round(vel/2));
+        keys.get(hitkey).Press(hitkey, round(vel/2));
+      }
+    }
+  }
 }
 
 // Objects stop touching each other
 void endContact(Contact cp) {
+  Fixture f1 = cp.getFixtureA();
+  Fixture f2 = cp.getFixtureB();
+  // Get both bodies
+  Body b1 = f1.getBody();
+  Body b2 = f2.getBody();
+
+  // Get our objects that reference these bodies
+  Object o1 = b1.getUserData();
+  Object o2 = b2.getUserData();
+
+  if (o1.getClass() == Boundary.class && o2.getClass() == Box.class) {
+    Boundary p1 = (Boundary) o1;
+    Box p2 = (Box) o2;
+    int hitkey = p1.getKey();
+    if (p2.getAge() > 10 && hitkey < 88) {
+      //p2.change();
+      if (hitkey > -1) {
+        myBus.sendNoteOff(0, hitkey+21, 0);
+        keys.get(hitkey).unPress(hitkey);
+      }
+    }
+  }
 }

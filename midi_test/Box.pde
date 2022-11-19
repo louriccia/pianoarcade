@@ -13,16 +13,21 @@ class Box {
   float iVV;
   float bc;
   boolean delete = false;
+  int age = 0;
 
   // Constructor
   Box(float x, float y, float _w, float _h, float _iVV, float box_color) {
     w = _w;
-    h = max(2, min(_h, height/2));
+    h = max(15, min(_h, height/2));
     bc = box_color;
     iVV = _iVV;
     // Add the box to the box2d world
     makeBody(new Vec2(x, y), w, h);
     body.setUserData(this);
+  }
+  
+  Body getBody(){
+   return body; 
   }
 
   // This function removes the particle from the box2d world
@@ -46,6 +51,10 @@ class Box {
     return false;
   }
   
+  int getAge(){
+     return age; 
+  }
+  
   void change() {
      bc = 128; 
   }
@@ -56,7 +65,7 @@ class Box {
     Vec2 pos = box2d.getBodyPixelCoord(body);
     // Get its angle of rotation
     float a = body.getAngle();
-
+    age ++;
     rectMode(CENTER);
     pushMatrix();
     translate(pos.x, pos.y);
