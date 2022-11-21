@@ -24,7 +24,9 @@ ArrayList<Key> keys = new ArrayList<Key>();
 ArrayList<Boundary> boundaries;
 // A list for all of our rectangles
 ArrayList<Box> boxes;
+ArrayList<Particle> particles;
 ArrayList<FloatList> queue;
+Ball ball;
 //Spring spring;
 MidiBus myBus;
 
@@ -39,11 +41,17 @@ float pitchBender = 64;
 boolean sustain = false;
 int keysPressed = 0;
 int activeNotes = 0;
-int gameMode = 2;
-
+int gameMode = 3;
+Boundary hoop;
+float hoopx = 0;
+int direction = -1;
 float pyth(Vec2 vec) {
   return sqrt(vec.x*vec.x + vec.y*vec.y);
 }
+
+float paddleX = 0;
+float paddleXTarget = 0;
+float targetBallVelocity = 50;
 
 void setup() {
   size(1600, 1000, P3D);
@@ -63,21 +71,28 @@ void setup() {
   boxes = new ArrayList<Box>();
   queue = new ArrayList<FloatList>();
   boundaries = new ArrayList<Boundary>();
+  // Create the empty list
+  particles = new ArrayList<Particle>();
+
+  ball = new Ball(width/4, height/4, 10.0);
 
   int bnote = 0;
   for (int i = 0; i < 52; i++) {
     boundaries.add(new Boundary(width*i/52 + width/104, height - keyLength/2 - 10, width/52, keyLength, bnote)); //white note
     bnote ++;
-    if (i % 7 != 1 && i % 7 != 4) {
+    if (i % 7 != 1 && i % 7 != 4 && i != 51) {
       boundaries.add(new Boundary(width*i/52 + width/52, height - keyLength + keyLength*blackLength/2-1, blackWidth, blackLength*keyLength, bnote)); //black note
       bnote ++;
     }
   }
 
+  hoop = new Boundary(width/2, height/2, width/20, 10, -1);
+  boundaries.add(hoop);
   // Add a bunch of fixed boundaries
-  boundaries.add(new Boundary(width/2, 0, width, 0, -1));
-  boundaries.add(new Boundary(width/2, height, width, 0, -1));
-
+  boundaries.add(new Boundary(width/2, 0, width, 0.2, -1));
+  boundaries.add(new Boundary(width/2, height, width, 0.2, -1));
+  boundaries.add(new Boundary(0, height/2, 0.2, height, -1));
+  boundaries.add(new Boundary(width, height/2, 0.2, height, -1));
   //boundaries.add(new Boundary(3*width/4,height-keyLength,width/2-50,10));
 
   MidiBus.list();
@@ -149,6 +164,11 @@ void setup() {
 
   // myBus.sendMessage(0xC1, 0, instrument, 00); //change instrument
   //myBus.sendMessage(0xC1, 1, 35, 00); //change instrument
+  if (gameMode == 2) {
+    for (int i = 0; i < 52; i++) {
+      particles.add(new Particle(width*i/52 + width/104, height - keyLength - 50, width/104));
+    }
+  }
 }
 
 void draw() {
@@ -170,19 +190,58 @@ void draw() {
       boxes.add(p);
     }
     queue.clear();
+  } else if (gameMode == 2) {
+    background(0);
+    box2d.setGravity(0, -100);
+
+    if (hoopx < 0) {
+      direction = 1;
+    } else if (hoopx > width) {
+      direction = -1;
+    }
+    float hoopspeed = 52/max(particles.size(), 1);
+    hoopx += direction * hoopspeed;
+    hoop.setposition(hoopx, height/2);
+  } else if (gameMode == 3) {
+    paddleX += (paddleXTarget - paddleX)*0.9;
+    hoop.setposition(width*paddleX/88, height - keyLength - 5);
+    background(30);
+    box2d.setGravity(0, 0);
+    Ball b = ball;
+    b.display();
+    Vec2 vel2 = ball.getBody().getLinearVelocity();
+    float vel = pyth(vel2);
+    float vel_adj = targetBallVelocity/vel;
+    ball.setVelocity(new Vec2(vel_adj*vel2.x, vel_adj*vel2.y));
   }
 
   // We must always step through time!
   box2d.step();
 
   // Display all the boundaries
-  for (Boundary wall : boundaries) {
-    wall.display();
+  for (int i = 0; i < boundaries.size(); i++) {
+    Boundary b = boundaries.get(i);
+    if (b.done()) {
+      //boundaries.remove(b);
+    } else if (gameMode != 3) {
+      b.display();
+    }
   }
 
   // Display all the boxes
   for (Box b : boxes) {
     b.display();
+  }
+
+  // Look at all particles
+  for (int i = particles.size()-1; i >= 0; i--) {
+    Particle p = particles.get(i);
+    p.display();
+    // Particles that leave the screen, we delete them
+    // (note they have to be deleted from both the box2d world and our list
+    if (p.done()) {
+      particles.remove(i);
+    }
   }
 
   // Boxes that leave the screen, we delete them
@@ -196,138 +255,10 @@ void draw() {
 
   for (int i = 0; i < keys.size(); i++) {
     Key k = keys.get(i);
-    k.render(i);
-  }
-  if (frameCount % 10 == 0) {
-    //myBus.sendMessage(0xC1,  0, instrument, 00); //change instrument
-    //instrument ++;
-    int randomNote = (int)random(80);
-    //myBus.sendNoteOn(0, randomNote, 60); //channel 0 should work
-    //keys.get(randomNote).Press(60);
+    if (gameMode == 3 && !boundaries.get(i).done()) {
+      k.render(i);
+    }
   }
   colorMode(HSB);
-  //fill(255*(frameCount%(height - keyLength))/(height - keyLength), 255, 255);
-  //rect(0, frameCount%(height-keyLength), 5, 1);
-  //fill(0);
-  //rect(5, 0, 10, height - keyLength);
-  //fill(255);
-  //circle(8, pitchBender, 5);
   spout.sendTexture();
-}
-
-void midiMessage(MidiMessage message, long timestamp, String bus_name) {
-  int unk = (int)(message.getMessage()[0] & 0xFF) ;
-  int note = (int)(message.getMessage()[1] & 0xFF) ;
-  int vel = (int)(message.getMessage()[2] & 0xFF);
-  int n = note - 21;
-  if (unk == 144 || unk == 128) {
-    Key k = keys.get(n);
-    if (unk == 144) { //NOTE ON
-      k.Press(n, vel);
-      keysPressed++;
-      activeNotes ++;
-      myBus.sendNoteOn(0, n+21, vel);
-      //myBus.sendNoteOn(1, n+21, vel);
-      if (n == 0) {
-        instrument++;
-        myBus.sendMessage(0xC1, 0, instrument, 00);
-      }
-      if(gameMode == 2){
-        Boundary b = boundaries.get(n);
-        b.setVelocity(new Vec2(0, vel));
-      }
-    } else if (unk == 128) { // NOTE OFF
-      try {
-        //if (gameMode == 1) {
-        // k.spawnBox(n);
-        //}
-        k.unPress(n);
-        activeNotes --;
-        myBus.sendNoteOff(0, n+21, vel);
-      }
-      catch (Exception e) {
-        println("there was an error");
-      }
-    }
-  } else if (unk == 176) { //SUSTAIN
-    myBus.sendMessage(0xB0, 0, 0x40, vel);
-    if (vel == 127) {
-      sustain = true;
-    } else if (vel == 0) {
-      sustain = false;
-      for (int i = 0; i < keys.size(); i++) {
-        keys.get(i).unSustain(i);
-      }
-    }
-  } else if (unk == 224) { //PITCH BENDER
-    if (vel < 64) {
-      //pitchBender += (64 - vel)/2;
-    } else {
-      //pitchBender -= (vel - 64)/2;
-    }
-    pitchBender = vel;
-    //pitchBender = max(0, pitchBender);
-    //pitchBender = min(pitchBender, height - keyLength);
-    //println(pitchBender);
-    float gravity = map(pitchBender, 0, 125, -100, 100);
-    box2d.setGravity(0, gravity);
-  }
-  //println(unk + ": Note "+ note + ", vel " + vel);
-}
-
-// Collision event functions!
-void beginContact(Contact cp) {
-  // Get both fixtures
-  Fixture f1 = cp.getFixtureA();
-  Fixture f2 = cp.getFixtureB();
-  // Get both bodies
-  Body b1 = f1.getBody();
-  Body b2 = f2.getBody();
-
-  // Get our objects that reference these bodies
-  Object o1 = b1.getUserData();
-  Object o2 = b2.getUserData();
-
-  if (o1.getClass() == Boundary.class && o2.getClass() == Box.class) {
-    Boundary p1 = (Boundary) o1;
-    //p1.change();
-
-    float vel = pyth(b2.getLinearVelocity());
-    //println(b2.getLinearVelocity().toString(), vel);
-    Box p2 = (Box) o2;
-    int hitkey = p1.getKey();
-    if (p2.getAge() > 10 && hitkey < 88) {
-      //p2.change();
-      if (hitkey > -1) {
-        myBus.sendNoteOn(0, hitkey+21, round(vel/2));
-        keys.get(hitkey).Press(hitkey, round(vel/2));
-      }
-    }
-  }
-}
-
-// Objects stop touching each other
-void endContact(Contact cp) {
-  Fixture f1 = cp.getFixtureA();
-  Fixture f2 = cp.getFixtureB();
-  // Get both bodies
-  Body b1 = f1.getBody();
-  Body b2 = f2.getBody();
-
-  // Get our objects that reference these bodies
-  Object o1 = b1.getUserData();
-  Object o2 = b2.getUserData();
-
-  if (o1.getClass() == Boundary.class && o2.getClass() == Box.class) {
-    Boundary p1 = (Boundary) o1;
-    Box p2 = (Box) o2;
-    int hitkey = p1.getKey();
-    if (p2.getAge() > 10 && hitkey < 88) {
-      //p2.change();
-      if (hitkey > -1) {
-        myBus.sendNoteOff(0, hitkey+21, 0);
-        keys.get(hitkey).unPress(hitkey);
-      }
-    }
-  }
 }

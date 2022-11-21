@@ -6,6 +6,7 @@ class Key {
   PShape keyShape;
   int sat = 0;
   int duration = 0;
+  float physicsVelocity = 0;
   int dur = 0;
   FloatList box_data;
   IntDict whitemap = new IntDict(new Object[][] {
@@ -18,10 +19,17 @@ class Key {
     { "10", 4 }
     });
   FloatDict blackadjust = new FloatDict(new Object[][] {
+    { "0", 0.0},
     { "1", (1-blackIntrude)*blackWidth},
+    { "2", 0.0},
+    { "3", 0.0},
     { "4", blackIntrude*blackWidth },
+    { "5", 0.0},
     { "6", (1-blackIntrude)*blackWidth },
+    { "7", 0.0},
+    { "8", 0.0},
     { "9", blackIntrude*blackWidth },
+    { "10", 0.0},
     { "11", blackWidth*.5 }
     });
   int[] black_notes = { 1, 4, 6, 9, 11 };
@@ -45,8 +53,8 @@ class Key {
     }
   }
   void Press(int note, int vel) {
-    if(on){
-       spawnBox(note);
+    if (on) {
+      spawnBox(note);
     }
     dur = 0;
     on = true;
@@ -54,7 +62,7 @@ class Key {
     initialVelocity = vel;
     sat = 121 + (int)random(124);
   }
- 
+
   void spawnBox(int note) {
     if (dur != 0) {
       box_data = new FloatList();
@@ -71,31 +79,30 @@ class Key {
       }
       box_data.append(dur);
       box_data.append(initialVelocity*2);
-      if(black(note)){
+      if (black(note)) {
         box_data.append(-1);
       } else {
-         box_data.append((keysPressed*2)%255); 
+        box_data.append((keysPressed*2)%255);
       }
-      
+
       queue.add(box_data);
     }
   }
-   void unPress(int note) {
+  void unPress(int note) {
     if (!sustain) {
       if (gameMode == 1) {
-         spawnBox(note);
-        }
+        spawnBox(note);
+      }
       on = false;
       duration = 0;
       dur = 0;
-      
     } else {
       sustained = true;
     }
   }
   void unSustain(int note) {
     if (sustained) {
-      if(gameMode == 1){
+      if (gameMode == 1) {
         spawnBox(note);
       }
       sustained = false;
@@ -103,6 +110,9 @@ class Key {
       duration = 0;
       dur = 0;
     }
+  }
+  void setPVelocity(int vel) {
+    physicsVelocity = vel;
   }
   void render(int note) {
     rectMode(CORNER);
@@ -115,6 +125,14 @@ class Key {
     if (on) {
       duration +=velocity;
       dur += 2;
+    }
+    if (physicsVelocity > 0.1 && !on) {
+      physicsVelocity *= 0.94;
+    }
+    if (!blk) {
+      boundaries.get(note).setposition(note_x + width/104, height - keyLength/2 - map(physicsVelocity, 0, 127, 0, keyLength));
+    } else {
+      boundaries.get(note).setposition(note_x + blackWidth/2 - blackadjust.get(str(o)), height + -keyLength + keyLength*blackLength/2 - map(physicsVelocity, 0, 127, 0, keyLength*blackLength));
     }
     if (velocity > 0) {
       velocity -= 0.20;

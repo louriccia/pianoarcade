@@ -1,13 +1,8 @@
-// The Nature of Code
-// <http://www.shiffman.net/teaching/nature>
-// Spring 2012
-// Box2DProcessing example
-
-// A fixed boundary class
-
 class Boundary {
 
   // A boundary is a simple rectangle with x,y,width,and height
+  
+  Body body;
   float x;
   float y;
   float w;
@@ -15,9 +10,7 @@ class Boundary {
   boolean delete = false;
   int associated_key = 0;
 
-  // But we also have to make a body for box2d to know about it
-  Body b;
-
+  //Constructor
   Boundary(float x_, float y_, float w_, float h_, int k) {
     x = x_;
     y = y_;
@@ -25,38 +18,37 @@ class Boundary {
     h = h_;
     associated_key = k;
     // Define the polygon
-    PolygonShape ps = new PolygonShape();
-    // Figure out the box2d coordinates
-    float box2dW = box2d.scalarPixelsToWorld(w/2);
-    float box2dH = box2d.scalarPixelsToWorld(h/2);
-    // We're just a box
-    ps.setAsBox(box2dW, box2dH);
-
-
-    // Create the body
-    BodyDef bd = new BodyDef();
-    bd.type = BodyType.KINEMATIC;
-    bd.position.set(box2d.coordPixelsToWorld(x, y));
-    bd.fixedRotation = true;
-    b = box2d.createBody(bd);
-
-    // Attached the shape to the body using a Fixture
-    // Define a fixture
-    FixtureDef fd = new FixtureDef();
-    fd.shape = ps;
-    // Parameters that affect physics
-    fd.density = 1;
-    fd.friction = 0.3;
-    fd.restitution = 0.5;
-
-    b.createFixture(fd);
-
-    b.setUserData(this);
+    makeBody(new Vec2(x,y),w,h);
+    body.setUserData(this);
   }
   
+  void setAngularVelocity(float a) {
+    body.setAngularVelocity(a); 
+  }
   void setVelocity(Vec2 v) {
-    println(associated_key);
-     b.setLinearVelocity(box2d.coordPixelsToWorld(v));
+     body.setLinearVelocity(v);
+  }
+  
+  void killBody() {
+    box2d.destroyBody(body);
+  }
+  
+  boolean done() {
+    if (delete) {
+      body.getFixtureList().setSensor(true);
+      //killBody();
+      return true;
+    }
+    return false;
+  }
+  
+  void setposition(float x, float y) {
+    Vec2 pos = body.getWorldCenter();
+    Vec2 target = box2d.coordPixelsToWorld(x,y);
+    Vec2 diff = new Vec2(target.x-pos.x,target.y-pos.y);
+    diff.mulLocal(50);
+    setVelocity(diff);
+    setAngularVelocity(0);
   }
 
   int getKey() {
@@ -64,15 +56,48 @@ class Boundary {
   }
   
   Body getBody() {
-   return b; 
+   return body; 
   }
-
+  
   // Draw the boundary, if it were at an angle we'd have to do something fancier
   void display() {
-    fill(128);
+    // We look at each body and get its screen position
+    Vec2 pos = box2d.getBodyPixelCoord(body);
+    // Get its angle of rotation
+    float a = body.getAngle();
+
+    rectMode(PConstants.CENTER);
+    pushMatrix();
+    translate(pos.x,pos.y);
+    rotate(a);
+    fill(175);
     stroke(0);
-    rectMode(CENTER);
-    rect(x, y, w, h);
+    rect(0,0,w,h);
+    popMatrix();
+  }
+  
+  void makeBody(Vec2 center, float w_, float h_) {
+    // Create the body
+    BodyDef bd = new BodyDef();
+    bd.type = BodyType.KINEMATIC;
+    bd.position.set(box2d.coordPixelsToWorld(center));
+    bd.fixedRotation = true;
+    body = box2d.createBody(bd);
+    
+    PolygonShape ps = new PolygonShape();
+    float box2dW = box2d.scalarPixelsToWorld(w_/2);
+    float box2dH = box2d.scalarPixelsToWorld(h_/2);
+    ps.setAsBox(box2dW, box2dH);
+
+    // Define a fixture
+    FixtureDef fd = new FixtureDef();
+    fd.shape = ps;
+    // Parameters that affect physics
+    fd.density = 0.0;
+    fd.friction = 0.0;
+    fd.restitution = 0.0;
+
+    body.createFixture(fd); 
   }
 
   void delete() {
