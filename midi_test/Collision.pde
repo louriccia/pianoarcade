@@ -21,9 +21,9 @@ void beginContact(Contact cp) {
     int hitkey = p1.getKey();
     if (p2.getAge() > 10 && hitkey < 88) {
       //p2.change();
-      if (hitkey > -1) {
-        myBus.sendNoteOn(0, hitkey+21, round(vel/2));
-        keys.get(hitkey).Press(hitkey, round(vel/2));
+      if (hitkey > -1 && pitchBender > 30) {
+        myBus.sendNoteOn(0, hitkey+21, round(vel));
+        keys.get(hitkey).Press(hitkey, round(vel));
       }
     }
   } else if (o1 == hoop && o2.getClass() == Particle.class && b2.getLinearVelocity().y < 0) {
@@ -37,9 +37,11 @@ void beginContact(Contact cp) {
   } else if (o1.getClass() == Boundary.class && o2 == ball && gameMode == 3) {
     Boundary p1 = (Boundary) o1;
     int hitkey = p1.getKey();
-    if (hitkey >= 0 && hitkey < 88) {
+    if (hitkey >= 0 && hitkey < 88 && !boundaries.get(hitkey).done()) {
       myBus.sendNoteOn(0, hitkey+21, 120);
       keys.get(hitkey).Press(hitkey, 120);
+      p1.delete();
+    } else if (hitkey == -2){
       p1.delete();
     }
   }

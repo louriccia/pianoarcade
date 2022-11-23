@@ -78,7 +78,7 @@ class Key {
         box_data.append(width/52);
       }
       box_data.append(dur);
-      box_data.append(initialVelocity*2);
+      box_data.append(initialVelocity*4);
       if (black(note)) {
         box_data.append(-1);
       } else {
@@ -113,6 +113,7 @@ class Key {
   }
   void setPVelocity(int vel) {
     physicsVelocity = vel;
+    println("set pvel");
   }
   void render(int note) {
     rectMode(CORNER);

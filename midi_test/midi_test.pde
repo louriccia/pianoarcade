@@ -30,8 +30,8 @@ Ball ball;
 //Spring spring;
 MidiBus myBus;
 
-int midiINDevice  = 1;
-int midiOUTDevice = 5;
+int midiINDevice  = 3;
+int midiOUTDevice = 6;
 float keyLength = 200;
 float blackWidth = 20;
 float blackLength = .6;
@@ -43,6 +43,10 @@ int keysPressed = 0;
 int activeNotes = 0;
 int gameMode = 3;
 Boundary hoop;
+Boundary lower;
+Boundary upper;
+Boundary left;
+Boundary right;
 float hoopx = 0;
 int direction = -1;
 float pyth(Vec2 vec) {
@@ -89,10 +93,15 @@ void setup() {
   hoop = new Boundary(width/2, height/2, width/20, 10, -1);
   boundaries.add(hoop);
   // Add a bunch of fixed boundaries
-  boundaries.add(new Boundary(width/2, 0, width, 0.2, -1));
-  boundaries.add(new Boundary(width/2, height, width, 0.2, -1));
-  boundaries.add(new Boundary(0, height/2, 0.2, height, -1));
-  boundaries.add(new Boundary(width, height/2, 0.2, height, -1));
+  left = new Boundary(0, height/2, 0.2, height, -1);
+  upper = new Boundary(width/2, 0, width, 0.2, -1);
+  lower = new Boundary(width/2, height, width, 0.2, -1);
+  right = new Boundary(width, height/2, 0.2, height, -1);
+  boundaries.add(upper);
+  boundaries.add(lower);
+  boundaries.add(left);
+  boundaries.add(right);
+
   //boundaries.add(new Boundary(3*width/4,height-keyLength,width/2-50,10));
 
   MidiBus.list();
@@ -168,7 +177,23 @@ void setup() {
     for (int i = 0; i < 52; i++) {
       particles.add(new Particle(width*i/52 + width/104, height - keyLength - 50, width/104));
     }
+  } else if (gameMode == 3) {
+    float cellWidth = 20;
+    float cellHeight = 20;
+    for (int i = 0; i < 10; i++) {
+      for (int j = 0; j < 10; j ++) {
+        boundaries.add(new Boundary(j*width/cellWidth + width/cellWidth*2, i*cellHeight + cellHeight/2, width/cellWidth, cellHeight, -2));
+      }
+    }
   }
+}
+
+void dim() {
+  blendMode(SUBTRACT);
+  noStroke();
+  fill(255, 2);
+  rect(0, 0, width, height - keyLength);
+  blendMode(BLEND);
 }
 
 void draw() {
@@ -176,13 +201,13 @@ void draw() {
   //rect(globalNote*width/88, 300, 20, 100);
 
   if (gameMode == 0) {
-    blendMode(SUBTRACT);
-    noStroke();
-    fill(255, 2);
-    if (frameCount%32 == 0) {
-      rect(0, 0, width, height - keyLength);
-    }
-    blendMode(BLEND);
+    //blendMode(SUBTRACT);
+    //noStroke();
+    //fill(255, 2);
+    //if (frameCount%32 == 0) {
+    //  rect(0, 0, width, height - keyLength);
+    //}
+    //blendMode(BLEND);
   } else if (gameMode == 1) {
     background(0);
     for (int i = 0; i < queue.size(); i ++) {
@@ -190,7 +215,11 @@ void draw() {
       boxes.add(p);
     }
     queue.clear();
+    left.disableCollision();
+    right.disableCollision();
+    hoop.disableCollision();
   } else if (gameMode == 2) {
+
     background(0);
     box2d.setGravity(0, -100);
 
@@ -211,6 +240,11 @@ void draw() {
     b.display();
     Vec2 vel2 = ball.getBody().getLinearVelocity();
     float vel = pyth(vel2);
+    if (sustain) {
+      targetBallVelocity = 5;
+    } else {
+      targetBallVelocity = 30;
+    }
     float vel_adj = targetBallVelocity/vel;
     ball.setVelocity(new Vec2(vel_adj*vel2.x, vel_adj*vel2.y));
   }
@@ -223,8 +257,10 @@ void draw() {
     Boundary b = boundaries.get(i);
     if (b.done()) {
       //boundaries.remove(b);
-    } else if (gameMode != 3) {
-      b.display();
+    } else if (gameMode != 3  || b == hoop || b.getKey() < 0) {
+      if (gameMode > 1) {
+        b.display();
+      }
     }
   }
 
@@ -256,6 +292,8 @@ void draw() {
   for (int i = 0; i < keys.size(); i++) {
     Key k = keys.get(i);
     if (gameMode == 3 && !boundaries.get(i).done()) {
+      k.render(i);
+    } else if ( gameMode != 3) {
       k.render(i);
     }
   }

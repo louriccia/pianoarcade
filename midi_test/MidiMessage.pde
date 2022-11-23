@@ -10,14 +10,15 @@ void midiMessage(MidiMessage message, long timestamp, String bus_name) {
       k.Press(n, vel);
       keysPressed++;
       activeNotes ++;
-      myBus.sendNoteOn(0, n+21, vel);
+      if (gameMode !=3 || (gameMode == 3 && !boundaries.get(n).done())) {
+        myBus.sendNoteOn(0, n+21, vel);
+      }
       //myBus.sendNoteOn(1, n+21, vel);
       if (n == 0) {
         instrument++;
         myBus.sendMessage(0xC1, 0, instrument, 00);
       }
       if (gameMode == 2) {
-
         keys.get(n).setPVelocity(vel);
       }
     } else if (unk == 128) { // NOTE OFF
@@ -50,6 +51,7 @@ void midiMessage(MidiMessage message, long timestamp, String bus_name) {
       //pitchBender -= (vel - 64)/2;
     }
     pitchBender = vel;
+    println(pitchBender);
     //pitchBender = max(0, pitchBender);
     //pitchBender = min(pitchBender, height - keyLength);
     //println(pitchBender);
