@@ -12,7 +12,7 @@ class Ball {
   float r;
   boolean done = false;
   color col;
-
+  BodyDef bd = new BodyDef();
 
   Ball(float x, float y, float r_) {
     r = r_;
@@ -28,11 +28,15 @@ class Ball {
   }
 
   Body getBody() {
-     return body; 
+    return body;
   }
-  
-  void setVelocity(Vec2 vec){
-      body.setLinearVelocity(vec);
+
+  void resetPosition() {
+    bd.position.set(box2d.coordPixelsToWorld(new Vec2(width/4, height/4)));
+  }
+
+  void setVelocity(Vec2 vec) {
+    body.setLinearVelocity(vec);
   }
 
   // Change color when hit
@@ -62,9 +66,8 @@ class Ball {
     pushMatrix();
     translate(pos.x, pos.y);
     rotate(a);
-    fill(col);
-    stroke(0);
-    strokeWeight(1);
+    fill(255);
+    noStroke();
     ellipse(0, 0, r*2, r*2);
     // Let's add a line so we can see the rotation
     line(0, 0, r, 0);
@@ -74,7 +77,7 @@ class Ball {
   // Here's our function that adds the particle to the Box2D world
   void makeBody(float x, float y, float r) {
     // Define a body
-    BodyDef bd = new BodyDef();
+
     // Set its position
     bd.position = box2d.coordPixelsToWorld(x, y);
     bd.type = BodyType.DYNAMIC;

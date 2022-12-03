@@ -35,8 +35,8 @@ class Boundary {
 
   boolean done() {
     if (delete) {
-      body.getFixtureList().setSensor(true);
-      //killBody();
+      //body.getFixtureList().setSensor(true);
+      killBody();
       return true;
     }
     return false;
@@ -79,7 +79,7 @@ class Boundary {
       pushMatrix();
       translate(pos.x, pos.y);
       rotate(a);
-      fill(175);
+      fill(0, 255, 255);
       stroke(0);
       rect(0, 0, w, h);
       popMatrix();

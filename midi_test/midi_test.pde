@@ -1,4 +1,4 @@
-
+//use 117 for
 // SimpleMidi.pde
 import shiffman.box2d.*;
 import org.jbox2d.collision.shapes.*;
@@ -11,6 +11,8 @@ import org.jbox2d.dynamics.contacts.*;
 import themidibus.*; //Import the library
 import javax.sound.midi.MidiMessage;
 import spout.*;
+
+Boolean guide = false;
 
 Spout spout;
 Box2DProcessing box2d;
@@ -30,35 +32,38 @@ Ball ball;
 //Spring spring;
 MidiBus myBus;
 
-int midiINDevice  = 3;
-int midiOUTDevice = 6;
-float keyLength = 200;
-float blackWidth = 20;
-float blackLength = .6;
-float blackIntrude = .6;
+int midiINDevice  = 1;
+int midiOUTDevice = 4;
+float keyLength = 165;
+float blackWidth = 13;
+float blackLength = .66;
+float blackIntrude = .66;
 int instrument = 0;
 float pitchBender = 64;
 boolean sustain = false;
 int keysPressed = 0;
 int activeNotes = 0;
-int gameMode = 3;
+int gameMode = 0;
 Boundary hoop;
 Boundary lower;
 Boundary upper;
 Boundary left;
 Boundary right;
 float hoopx = 0;
+float hoopy = width/2;
 int direction = -1;
 float pyth(Vec2 vec) {
   return sqrt(vec.x*vec.x + vec.y*vec.y);
 }
 
+int cheatCooldown = 0;
+
 float paddleX = 0;
 float paddleXTarget = 0;
-float targetBallVelocity = 50;
+float targetBallVelocity = 0;
 
 void setup() {
-  size(1600, 1000, P3D);
+  size(1200, 1050, P3D);
   smooth();
   spout = new Spout(this);
   spout.createSender("midi_test", width, height);
@@ -90,7 +95,7 @@ void setup() {
     }
   }
 
-  hoop = new Boundary(width/2, height/2, width/20, 10, -1);
+  hoop = new Boundary(width/2, height/2, width/20, 20, -1);
   boundaries.add(hoop);
   // Add a bunch of fixed boundaries
   left = new Boundary(0, height/2, 0.2, height, -1);
@@ -171,6 +176,8 @@ void setup() {
   midKeyLeft.endShape(CLOSE);
   midKeyLeft.disableStyle();
 
+  myBus.sendMessage(0xC1, 0, instrument, 00);
+  myBus.sendMessage(0xC1, 1, 117, 00);
   // myBus.sendMessage(0xC1, 0, instrument, 00); //change instrument
   //myBus.sendMessage(0xC1, 1, 35, 00); //change instrument
   if (gameMode == 2) {
@@ -196,11 +203,74 @@ void dim() {
   blendMode(BLEND);
 }
 
+void win() {
+  if (gameMode == 0) { //circles
+    left.disableCollision();
+    right.disableCollision();
+    hoop.disableCollision();
+  } else if (gameMode == 1) { //boxes
+    for (int i = boxes.size()-1; i >= 0; i--) {
+      Box b = boxes.get(i);
+      b.killBody();
+      boxes.remove(i);
+    }
+    for (int i = 0; i < 52; i++) {
+      particles.add(new Particle(width*i/52 + width/104, height - keyLength - 50, width/104));
+    }
+    left.enableCollision();
+    right.enableCollision();
+    hoop.enableCollision();
+  } else if (gameMode == 2) { //basektball
+    for (int i = particles.size()-1; i >= 0; i--) {
+      Particle p = particles.get(i);
+      p.killBody();
+      particles.remove(i);
+    }
+    float cellWidth = width/16;
+    float cellHeight = width/52;
+    for (int i = 2; i < 16; i++) {
+      for (int j = 1; j < 15; j ++) {
+        boundaries.add(new Boundary(j*cellWidth + cellWidth/2, i*cellHeight + cellHeight/2, cellWidth, cellHeight, -2));
+      }
+    }
+    ball = new Ball(width/2, height/2, 10.0);
+    //b.resetPosition();
+  } else if (gameMode == 3) { //breakout
+    ball = null;
+    for (int i = 0; i < keys.size(); i++) {
+      keys.get(i).enableRender();
+    }
+    gameMode = -1;
+  }
+  if (gameMode == 5) {
+    gameMode = -1 ;
+    background(0);
+  }
+  for (int i = 0; i < keys.size(); i++) {
+    Key k = keys.get(i);
+    background(0);
+    k.unPress(i);
+  }
+  sustain = false;
+  gameMode ++;
+}
+
 void draw() {
   //background(0);
   //rect(globalNote*width/88, 300, 20, 100);
 
+  if (guide) {
+    background(0, 255, 255);
+    fill(0);
+    rect(5, 5, width - 10, height - 10);
+  }
+
   if (gameMode == 0) {
+    if (keysPressed == 1000) {
+      keysPressed = 0;
+      win();
+    }
+
     //blendMode(SUBTRACT);
     //noStroke();
     //fill(255, 2);
@@ -215,9 +285,10 @@ void draw() {
       boxes.add(p);
     }
     queue.clear();
-    left.disableCollision();
-    right.disableCollision();
-    hoop.disableCollision();
+    if (keysPressed == 1000) {
+      keysPressed = 0;
+      win();
+    }
   } else if (gameMode == 2) {
 
     background(0);
@@ -230,23 +301,31 @@ void draw() {
     }
     float hoopspeed = 52/max(particles.size(), 1);
     hoopx += direction * hoopspeed;
-    hoop.setposition(hoopx, height/2);
+    hoopy = height/2 + map(pitchBender, 0, 127, height/4, -height/4);
+    hoop.setposition(hoopx, hoopy);
+    if (particles.size() == 0) {
+      win();
+    }
   } else if (gameMode == 3) {
     paddleX += (paddleXTarget - paddleX)*0.9;
-    hoop.setposition(width*paddleX/88, height - keyLength - 5);
+    hoop.setposition(width*paddleX/88, height - keyLength - 10);
     background(30);
-    box2d.setGravity(0, 0);
+    box2d.setGravity(0, map(pitchBender, 0, 127, -50, 50));
     Ball b = ball;
     b.display();
     Vec2 vel2 = ball.getBody().getLinearVelocity();
     float vel = pyth(vel2);
     if (sustain) {
-      targetBallVelocity = 5;
+      targetBallVelocity = 20;
     } else {
-      targetBallVelocity = 30;
+      targetBallVelocity = 60;
     }
     float vel_adj = targetBallVelocity/vel;
     ball.setVelocity(new Vec2(vel_adj*vel2.x, vel_adj*vel2.y));
+    if (boundaries.size() == 93) {
+      keysPressed = 0;
+      win();
+    }
   }
 
   // We must always step through time!
@@ -256,7 +335,7 @@ void draw() {
   for (int i = 0; i < boundaries.size(); i++) {
     Boundary b = boundaries.get(i);
     if (b.done()) {
-      //boundaries.remove(b);
+      boundaries.remove(b);
     } else if (gameMode != 3  || b == hoop || b.getKey() < 0) {
       if (gameMode > 1) {
         b.display();
@@ -289,14 +368,26 @@ void draw() {
     }
   }
 
+  int cheat = 0;
   for (int i = 0; i < keys.size(); i++) {
     Key k = keys.get(i);
+    if (k.played() && i % 3 == 0) {
+      cheat ++;
+    }
     if (gameMode == 3 && !boundaries.get(i).done()) {
       k.render(i);
     } else if ( gameMode != 3) {
       k.render(i);
     }
   }
+  if (cheat == 10 && cheatCooldown <= 0 && activeNotes == 10) {
+    win();
+    cheatCooldown = 50;
+  }
+  if (cheatCooldown > 0) {
+    cheatCooldown --;
+  }
   colorMode(HSB);
+  println(keysPressed);
   spout.sendTexture();
 }

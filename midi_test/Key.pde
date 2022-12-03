@@ -6,9 +6,11 @@ class Key {
   PShape keyShape;
   int sat = 0;
   int duration = 0;
+  boolean render = true;
   float physicsVelocity = 0;
   int dur = 0;
   FloatList box_data;
+  int cooldown = 0;
   IntDict whitemap = new IntDict(new Object[][] {
     { "0", 0 },
     { "2", 1 },
@@ -44,6 +46,18 @@ class Key {
     }
     return bl;
   }
+  Boolean played() {
+    return on;
+  }
+  void disableRender(){
+     render = false; 
+  }
+  void enableRender(){
+     render = true; 
+  }
+  Boolean disabled(){
+    return render;  
+  }
   int getOffset(int note) {
     int o = note % 12;
     if (black(note)) {
@@ -61,6 +75,14 @@ class Key {
     velocity = vel;
     initialVelocity = vel;
     sat = 121 + (int)random(124);
+  }
+
+  int getCooldown() {
+    return cooldown;
+  }
+
+  void setCooldown(int n) {
+    cooldown = n;
   }
 
   void spawnBox(int note) {
@@ -113,9 +135,11 @@ class Key {
   }
   void setPVelocity(int vel) {
     physicsVelocity = vel;
-    println("set pvel");
   }
   void render(int note) {
+    if (cooldown> 0) {
+      cooldown --;
+    }
     rectMode(CORNER);
     noStroke();
     Boolean blk = black(note);
@@ -152,37 +176,50 @@ class Key {
       }
       if (on == true) {
         if (gameMode == 0) {
-          fill(((keysPressed*2)%255), sat, 255*(initialVelocity/80));
-          circle(note_x + width/104, height - keyLength - initialVelocity*7 + 100, sqrt(duration));
-        } else if (gameMode == 1) {
+          fill(((keysPressed*2)%255), sat, 255); //255*(initialVelocity/80)
+          circle(note_x + width/104, height - keyLength - initialVelocity*8 + 100, sqrt(duration));
+        } else {
           fill(((keysPressed*2)%255), 255, 255);
         }
       } else {
         fill(255);
       }
+      if(render){
       shape(keyShape, note_x, height - keyLength);
+      }
     } else {
       if (on == true) {
         if (gameMode == 0) {
-          fill(0, 0, initialVelocity*3);
-          circle(note_x, height - keyLength - initialVelocity*7 + 100, sqrt(duration));
-        } else if (gameMode == 1) {
+          fill(0, 0, 255); //initialVelocity*3
+          circle(note_x, height - keyLength - initialVelocity*8 + 100, sqrt(duration));
+        } else if (gameMode == 3) {
+          fill(255);
+        } else {
           fill(255, 0, 255);
         }
       } else {
-        fill(0);
+        if (gameMode == 3) {
+          fill(255);
+        } else {
+          fill(0);
+        }
       }
+      if(render){
       rect(note_x - blackadjust.get(str(o)), height - keyLength, blackWidth, blackLength*keyLength);
+      }
     }
 
-    if (gameMode == 1 && on) {
-      fill(125);
-      if (black(note)) {
-        fill(255, 0, 255);
-        rect(note_x - blackadjust.get(str(o)), height - keyLength - dur, blackWidth, dur);
-      } else {
-        fill(((keysPressed*2)%255), 255, 255);
-        rect(note_x, height - keyLength - dur, width/52, dur);
+    if (gameMode == 1) {
+
+      if (on) {
+        fill(125);
+        if (black(note)) {
+          fill(255, 0, 255);
+          rect(note_x - blackadjust.get(str(o)), height - keyLength - dur, blackWidth, dur);
+        } else {
+          fill(((keysPressed*2)%255), 255, 255);
+          rect(note_x, height - keyLength - dur, width/52, dur);
+        }
       }
     }
   }

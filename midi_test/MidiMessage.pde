@@ -10,13 +10,13 @@ void midiMessage(MidiMessage message, long timestamp, String bus_name) {
       k.Press(n, vel);
       keysPressed++;
       activeNotes ++;
-      if (gameMode !=3 || (gameMode == 3 && !boundaries.get(n).done())) {
+      if (gameMode !=3 || (gameMode == 3 && keys.get(n).disabled())) {
         myBus.sendNoteOn(0, n+21, vel);
       }
       //myBus.sendNoteOn(1, n+21, vel);
       if (n == 0) {
         instrument++;
-        myBus.sendMessage(0xC1, 0, instrument, 00);
+        //myBus.sendMessage(0xC1, 0, instrument, 00);
       }
       if (gameMode == 2) {
         keys.get(n).setPVelocity(vel);
