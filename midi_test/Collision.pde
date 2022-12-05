@@ -30,23 +30,56 @@ void beginContact(Contact cp) {
   } else if (o1 == hoop && o2.getClass() == Particle.class && b2.getLinearVelocity().y < 0) { //make a basket
     Particle p2 = (Particle) o2;
     p2.delete();
-  } else if (o1 == hoop && o2 == ball) { //breakout ball hits paddle
+    myBus.sendNoteOn(2, 92 - particles.size(), 80);
+  } else if (o1 == hoop && o2.getClass() == Ball.class) { //breakout ball hits paddle
+    Ball bl2 = (Ball) o2;
     Vec2 paddle_pos = box2d.getBodyPixelCoord(hoop.getBody());
-    Vec2 ball_pos = box2d.getBodyPixelCoord(ball.getBody());
+    Vec2 ball_pos = box2d.getBodyPixelCoord(bl2.getBody());
     float newx = ball_pos.x - paddle_pos.x;
-    ball.setVelocity(new Vec2(newx, sqrt(max(40*40 - newx*newx, 10))));
-  } else if (o1.getClass() == Boundary.class && o2 == ball && gameMode == 3) { //breakout ball hits block
+    bl2.setVelocity(new Vec2(newx, sqrt(max(40*40 - newx*newx, 20))));
+  } else if (o1.getClass() == Boundary.class && o2.getClass() == Ball.class && gameMode == 3) { //breakout ball hits block
     Boundary p1 = (Boundary) o1;
+    p1.setHit();
+    if (p1.getKey() == -2) {
+      deadt = 20;
+      deadx = p1.getx();
+      deady = p1.gety();
+    }
     int hitkey = p1.getKey();
-    if (hitkey >= 0 && hitkey < 88 && keys.get(hitkey).disabled()) {
+    if (hitkey >= 0 && hitkey < 88 && keys.get(hitkey).disabled()) { //hits key
       myBus.sendNoteOn(0, hitkey+21, 60);
       keys.get(hitkey).Press(hitkey, 60);
       p1.disableCollision();
       keys.get(hitkey).disableRender();
-    } else if (hitkey == -2) { //hits block
-      myBus.sendNoteOn(1, round(random(50))+ 40, 80);
+      boolean all_disabled = true;
+      for (int i = 0; i < keys.size(); i++) {
+        if (keys.get(i).disabled()) {
+          all_disabled = false;
+        }
+      }
+      if (all_disabled) {
+        reset= true;
+      }
+    } else if (hitkey == -2 ) { //hits block
+      if (boundaries.size() == 94) {
+        breakoutwin = true;
+      }
+      float newballchance = random(100);
+      if (newballchance < 1 && balls.size() < 4) {
+        FloatList ball_data = new FloatList();
+        ball_data.append(p1.getx());
+        ball_data.append(p1.gety());
+        ball_data.append(10.0);
+        ballqueue.add(ball_data);
+      }
+      if (p1.getType() == 0) {
+        myBus.sendNoteOn(1, round(random(50))+ 40, 80);
+      } else if (p1.getType() == 1) {
+        myBus.sendNoteOn(3, round(random(50))+ 40, 80);
+      } else if (p1.getType() == 2) {
+        myBus.sendNoteOn(4, round(random(50))+ 40, 80);
+      }
       p1.delete();
-      println(boundaries.size());
     }
   }
 }

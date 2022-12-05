@@ -13,6 +13,9 @@ import javax.sound.midi.MidiMessage;
 import spout.*;
 
 Boolean guide = false;
+PImage bball;
+PImage bballhoop;
+
 
 Spout spout;
 Box2DProcessing box2d;
@@ -27,13 +30,15 @@ ArrayList<Boundary> boundaries;
 // A list for all of our rectangles
 ArrayList<Box> boxes;
 ArrayList<Particle> particles;
+ArrayList<Ball> balls;
 ArrayList<FloatList> queue;
-Ball ball;
+ArrayList<FloatList> ballqueue;
 //Spring spring;
 MidiBus myBus;
 
+boolean reset = false;
 int midiINDevice  = 1;
-int midiOUTDevice = 4;
+int midiOUTDevice = 5;
 float keyLength = 165;
 float blackWidth = 13;
 float blackLength = .66;
@@ -41,6 +46,7 @@ float blackIntrude = .66;
 int instrument = 0;
 float pitchBender = 64;
 boolean sustain = false;
+boolean breakoutwin = false;
 int keysPressed = 0;
 int activeNotes = 0;
 int gameMode = 0;
@@ -56,6 +62,10 @@ float pyth(Vec2 vec) {
   return sqrt(vec.x*vec.x + vec.y*vec.y);
 }
 
+float deadx = 0;
+float deady = 0;
+float deadt = 0;
+
 int cheatCooldown = 0;
 
 float paddleX = 0;
@@ -65,6 +75,8 @@ float targetBallVelocity = 0;
 void setup() {
   size(1200, 1050, P3D);
   smooth();
+  bball = loadImage("bball-01.png");
+  bballhoop = loadImage("bball-02.png");
   spout = new Spout(this);
   spout.createSender("midi_test", width, height);
   // Initialize box2d physics and create the world
@@ -79,29 +91,29 @@ void setup() {
   // Create ArrayLists
   boxes = new ArrayList<Box>();
   queue = new ArrayList<FloatList>();
+  ballqueue = new ArrayList<FloatList>();
+  balls = new ArrayList<Ball>();
   boundaries = new ArrayList<Boundary>();
   // Create the empty list
   particles = new ArrayList<Particle>();
-
-  ball = new Ball(width/4, height/4, 10.0);
-
+  
   int bnote = 0;
   for (int i = 0; i < 52; i++) {
-    boundaries.add(new Boundary(width*i/52 + width/104, height - keyLength/2 - 10, width/52, keyLength, bnote)); //white note
+    boundaries.add(new Boundary(width*i/52 + width/104, height - keyLength/2 - 10, width/52, keyLength, bnote, 0)); //white note
     bnote ++;
     if (i % 7 != 1 && i % 7 != 4 && i != 51) {
-      boundaries.add(new Boundary(width*i/52 + width/52, height - keyLength + keyLength*blackLength/2-1, blackWidth, blackLength*keyLength, bnote)); //black note
+      boundaries.add(new Boundary(width*i/52 + width/52, height - keyLength + keyLength*blackLength/2-1, blackWidth, blackLength*keyLength, bnote, 0)); //black note
       bnote ++;
     }
   }
 
-  hoop = new Boundary(width/2, height/2, width/20, 20, -1);
+  hoop = new Boundary(width/2, height/2, width/20, 20, -1, 0);
   boundaries.add(hoop);
   // Add a bunch of fixed boundaries
-  left = new Boundary(0, height/2, 0.2, height, -1);
-  upper = new Boundary(width/2, 0, width, 0.2, -1);
-  lower = new Boundary(width/2, height, width, 0.2, -1);
-  right = new Boundary(width, height/2, 0.2, height, -1);
+  left = new Boundary(-4, height/2, 8, height, -1, 0);
+  upper = new Boundary(width/2, -4, width, 8, -1, 0);
+  lower = new Boundary(width/2, height + 4, width, 8, -1, 0);
+  right = new Boundary(width + 4, height/2, 8, height, -1, 0);
   boundaries.add(upper);
   boundaries.add(lower);
   boundaries.add(left);
@@ -178,21 +190,11 @@ void setup() {
 
   myBus.sendMessage(0xC1, 0, instrument, 00);
   myBus.sendMessage(0xC1, 1, 117, 00);
+  myBus.sendMessage(0xC1, 2, 55, 00);
+  myBus.sendMessage(0xC1, 3, 115, 00);
+  myBus.sendMessage(0xC1, 4, 116, 00);
   // myBus.sendMessage(0xC1, 0, instrument, 00); //change instrument
   //myBus.sendMessage(0xC1, 1, 35, 00); //change instrument
-  if (gameMode == 2) {
-    for (int i = 0; i < 52; i++) {
-      particles.add(new Particle(width*i/52 + width/104, height - keyLength - 50, width/104));
-    }
-  } else if (gameMode == 3) {
-    float cellWidth = 20;
-    float cellHeight = 20;
-    for (int i = 0; i < 10; i++) {
-      for (int j = 0; j < 10; j ++) {
-        boundaries.add(new Boundary(j*width/cellWidth + width/cellWidth*2, i*cellHeight + cellHeight/2, width/cellWidth, cellHeight, -2));
-      }
-    }
-  }
 }
 
 void dim() {
@@ -203,11 +205,66 @@ void dim() {
   blendMode(BLEND);
 }
 
+void resetBreakout() {
+  for (int i = 0; i < balls.size(); i++) {
+    Ball b = balls.get(i);
+    b.killBody();
+  }
+  balls.clear();
+  for (int i = 93; i < boundaries.size(); i ++) {
+    Boundary b = boundaries.get(i);
+    b.killBody();
+    boundaries.remove(i);
+    i--;
+  }
+  int missingrows = round(random(5));
+  float cellWidth = width/16;
+  float cellHeight = width/52;
+  for (int i = 4; i < 24; i++) {
+    int randomtype1 = floor(random(3));
+    int randomtype2 = floor(random(3));
+    for (int j = 1; j < 16; j ++) {
+      if (i % max(missingrows, 2) != 0) {
+        if (i % 2 == 0) {
+          if (j < 15) {
+            if (j % 2 == 0) {
+              boundaries.add(new Boundary(j*cellWidth + cellWidth/2, i*cellHeight + cellHeight/2, cellWidth, cellHeight, -2, randomtype1));
+            } else {
+              boundaries.add(new Boundary(j*cellWidth + cellWidth/2, i*cellHeight + cellHeight/2, cellWidth, cellHeight, -2, randomtype2));
+            }
+          }
+        } else {
+          if (j % 2 == 0) {
+            boundaries.add(new Boundary(j*cellWidth, i*cellHeight + cellHeight/2, cellWidth, cellHeight, -2, randomtype1));
+          } else {
+            boundaries.add(new Boundary(j*cellWidth, i*cellHeight + cellHeight/2, cellWidth, cellHeight, -2, randomtype2));
+          }
+        }
+      }
+    }
+  }
+  Ball bl = new Ball(width/2, height/2, 10.0);
+  balls.add(bl);
+  for (int i = 0; i < keys.size(); i++) {
+    Key k = keys.get(i);
+    background(0);
+    k.unPress(i);
+  }
+  for (int i = 0; i < keys.size(); i++) {
+    keys.get(i).enableRender();
+  }
+  for (int i = 0; i < boundaries.size(); i++) {
+    Boundary b = boundaries.get(i);
+    b.enableCollision();
+  }
+}
+
 void win() {
   if (gameMode == 0) { //circles
     left.disableCollision();
     right.disableCollision();
     hoop.disableCollision();
+    myBus.sendMessage(0xC1, 0, 4, 00);
   } else if (gameMode == 1) { //boxes
     for (int i = boxes.size()-1; i >= 0; i--) {
       Box b = boxes.get(i);
@@ -220,27 +277,32 @@ void win() {
     left.enableCollision();
     right.enableCollision();
     hoop.enableCollision();
+    myBus.sendMessage(0xC1, 0, 20, 00);
   } else if (gameMode == 2) { //basektball
     for (int i = particles.size()-1; i >= 0; i--) {
       Particle p = particles.get(i);
       p.killBody();
       particles.remove(i);
     }
-    float cellWidth = width/16;
-    float cellHeight = width/52;
-    for (int i = 2; i < 16; i++) {
-      for (int j = 1; j < 15; j ++) {
-        boundaries.add(new Boundary(j*cellWidth + cellWidth/2, i*cellHeight + cellHeight/2, cellWidth, cellHeight, -2));
-      }
-    }
-    ball = new Ball(width/2, height/2, 10.0);
-    //b.resetPosition();
+    resetBreakout();
+
+    myBus.sendMessage(0xC1, 0, 80, 00);
   } else if (gameMode == 3) { //breakout
-    ball = null;
     for (int i = 0; i < keys.size(); i++) {
       keys.get(i).enableRender();
     }
+    for (int i = 0; i < boundaries.size(); i++) {
+      Boundary b = boundaries.get(i);
+      b.enableCollision();
+    }
     gameMode = -1;
+    myBus.sendMessage(0xC1, 0, 0, 00);
+    for(int i = 0; i < balls.size(); i++){
+      Ball b = balls.get(i);
+      b.killBody();
+      balls.remove(i);
+    }
+    background(0);
   }
   if (gameMode == 5) {
     gameMode = -1 ;
@@ -248,7 +310,6 @@ void win() {
   }
   for (int i = 0; i < keys.size(); i++) {
     Key k = keys.get(i);
-    background(0);
     k.unPress(i);
   }
   sustain = false;
@@ -256,6 +317,10 @@ void win() {
 }
 
 void draw() {
+  if (reset) {
+    resetBreakout();
+    reset = false;
+  }
   //background(0);
   //rect(globalNote*width/88, 300, 20, 100);
 
@@ -266,18 +331,10 @@ void draw() {
   }
 
   if (gameMode == 0) {
-    if (keysPressed == 1000) {
+    if (keysPressed > 1000) {
       keysPressed = 0;
       win();
     }
-
-    //blendMode(SUBTRACT);
-    //noStroke();
-    //fill(255, 2);
-    //if (frameCount%32 == 0) {
-    //  rect(0, 0, width, height - keyLength);
-    //}
-    //blendMode(BLEND);
   } else if (gameMode == 1) {
     background(0);
     for (int i = 0; i < queue.size(); i ++) {
@@ -285,15 +342,13 @@ void draw() {
       boxes.add(p);
     }
     queue.clear();
-    if (keysPressed == 1000) {
+    if (keysPressed > 1000) {
       keysPressed = 0;
       win();
     }
   } else if (gameMode == 2) {
-
     background(0);
-    box2d.setGravity(0, -100);
-
+    box2d.setGravity(0, -100 + map(pitchBender, 0, 128, -100, 200));
     if (hoopx < 0) {
       direction = 1;
     } else if (hoopx > width) {
@@ -301,45 +356,76 @@ void draw() {
     }
     float hoopspeed = 52/max(particles.size(), 1);
     hoopx += direction * hoopspeed;
-    hoopy = height/2 + map(pitchBender, 0, 127, height/4, -height/4);
-    hoop.setposition(hoopx, hoopy);
+    //hoopy = height/2 + map(pitchBender, 0, 127, height/4, -height/4);
+    hoop.setposition(hoopx, height/2);
     if (particles.size() == 0) {
       win();
     }
   } else if (gameMode == 3) {
-    paddleX += (paddleXTarget - paddleX)*0.9;
-    hoop.setposition(width*paddleX/88, height - keyLength - 10);
-    background(30);
-    box2d.setGravity(0, map(pitchBender, 0, 127, -50, 50));
-    Ball b = ball;
-    b.display();
-    Vec2 vel2 = ball.getBody().getLinearVelocity();
-    float vel = pyth(vel2);
-    if (sustain) {
-      targetBallVelocity = 20;
-    } else {
-      targetBallVelocity = 60;
+    for (int i = 0; i < ballqueue.size(); i ++) {
+      Ball b = new Ball(ballqueue.get(i).get(0), ballqueue.get(i).get(1), ballqueue.get(i).get(2));
+      balls.add(b);
     }
-    float vel_adj = targetBallVelocity/vel;
-    ball.setVelocity(new Vec2(vel_adj*vel2.x, vel_adj*vel2.y));
-    if (boundaries.size() == 93) {
+    ballqueue.clear();
+    blendMode(SUBTRACT);
+    noStroke();
+    fill(255, 10);
+    //if (frameCount%32 == 0) {
+    rect(0, 0, width, height);
+    //}
+    blendMode(BLEND);
+    paddleX += (paddleXTarget - paddleX)*0.9;
+    fill(0);
+    rect(0, height - keyLength - 20, width, 20);
+    hoop.setposition(width*paddleX/88, height - keyLength - 10);
+    //background(30);
+    box2d.setGravity(0, map(pitchBender, 0, 127, -50, 50));
+    for (int i = 0; i < balls.size(); i++) {
+      Ball b = balls.get(i);
+      if (b != null) {
+        b.display();
+
+        Vec2 vel2 = b.getBody().getLinearVelocity();
+        float vel = pyth(vel2);
+        if (sustain) {
+          targetBallVelocity = 20;
+        } else {
+          targetBallVelocity = 70;
+        }
+        float vel_adj = targetBallVelocity/vel;
+        b.setVelocity(new Vec2(vel_adj*vel2.x, vel_adj*vel2.y));
+      }
+    }
+    if (breakoutwin) {
       keysPressed = 0;
+      breakoutwin = false;
       win();
+    }
+    if (deadt > 0 && boundaries.size() > 94) {
+      blendMode(ADD);
+      deadt --;
+      fill(0);
+      stroke(255);
+      rect(deadx + (-10 + random(20))*deadt/50 - width/32, deady + (-10 + random(20))*deadt/50 - width/104, width/16, width/52);
+      blendMode(BLEND);
     }
   }
 
   // We must always step through time!
   box2d.step();
-
+  println(balls.size());
   // Display all the boundaries
   for (int i = 0; i < boundaries.size(); i++) {
     Boundary b = boundaries.get(i);
     if (b.done()) {
       boundaries.remove(b);
-    } else if (gameMode != 3  || b == hoop || b.getKey() < 0) {
+    } else if (b == hoop || b.getKey() < 0) {
       if (gameMode > 1) {
         b.display();
       }
+    }
+    if(gameMode == 2){
+     b.display(); 
     }
   }
 
@@ -388,6 +474,5 @@ void draw() {
     cheatCooldown --;
   }
   colorMode(HSB);
-  println(keysPressed);
   spout.sendTexture();
 }

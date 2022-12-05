@@ -15,7 +15,8 @@ void midiMessage(MidiMessage message, long timestamp, String bus_name) {
       }
       //myBus.sendNoteOn(1, n+21, vel);
       if (n == 0) {
-        instrument++;
+        //instrument++;
+        //reset= true;
         //myBus.sendMessage(0xC1, 0, instrument, 00);
       }
       if (gameMode == 2) {
@@ -51,7 +52,6 @@ void midiMessage(MidiMessage message, long timestamp, String bus_name) {
       //pitchBender -= (vel - 64)/2;
     }
     pitchBender = vel;
-    println(pitchBender);
     //pitchBender = max(0, pitchBender);
     //pitchBender = min(pitchBender, height - keyLength);
     //println(pitchBender);

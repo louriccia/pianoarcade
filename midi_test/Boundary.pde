@@ -9,13 +9,16 @@ class Boundary {
   float h;
   boolean delete = false;
   int associated_key = 0;
+  int hit = 0;
+  int type = 0;
 
   //Constructor
-  Boundary(float x_, float y_, float w_, float h_, int k) {
+  Boundary(float x_, float y_, float w_, float h_, int k, int type_) {
     x = x_;
     y = y_;
     w = w_;
     h = h_;
+    type = type_;
     associated_key = k;
     // Define the polygon
     makeBody(new Vec2(x, y), w, h);
@@ -42,6 +45,8 @@ class Boundary {
     return false;
   }
 
+
+
   void disableCollision() {
     body.getFixtureList().setSensor(true);
   }
@@ -67,8 +72,31 @@ class Boundary {
     return body;
   }
 
+  void setHit() {
+    hit = 50;
+  }
+
+  int getHit() {
+    return hit;
+  }
+  
+  float getx(){
+   return x;
+  }
+  
+  int getType(){
+     return type; 
+  }
+  
+  float gety(){
+    return y;
+  }
+
   // Draw the boundary, if it were at an angle we'd have to do something fancier
   void display() {
+    if (hit > 0) {
+      hit --;
+    }
     if (!done()) {
       // We look at each body and get its screen position
       Vec2 pos = box2d.getBodyPixelCoord(body);
@@ -79,10 +107,29 @@ class Boundary {
       pushMatrix();
       translate(pos.x, pos.y);
       rotate(a);
-      fill(0, 255, 255);
-      stroke(0);
-      rect(0, 0, w, h);
+
+      if (this == hoop && gameMode == 2) {
+        noStroke();
+        bballhoop.resize(141, 159);
+        image(bballhoop, -69, -107);
+        //rect(0, 0, w, h);
+      } else {
+        if (hit > 0) {
+          fill(255);
+          //fill(map(hit, 0, 50, 0, 255));
+        } else if(gameMode == 2){
+          fill(255);
+        }else {
+          fill(type*80, 255, 255);
+        }
+        stroke(0);
+        rect((random(10) - 5)*hit/50, (random(10) - 5)*hit/50, w, h);
+      }
       popMatrix();
+    } else if (hit > 50) {
+      fill(255);
+      //fill(map(hit, 0, 50, 0, 255));
+      rect((random(20) - 10)*hit/50, (random(20) - 10)*hit/50, w, h);
     }
   }
 
