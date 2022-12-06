@@ -38,7 +38,7 @@ MidiBus myBus;
 
 boolean reset = false;
 int midiINDevice  = 1;
-int midiOUTDevice = 5;
+int midiOUTDevice = 4;
 float keyLength = 165;
 float blackWidth = 13;
 float blackLength = .66;
@@ -96,7 +96,7 @@ void setup() {
   boundaries = new ArrayList<Boundary>();
   // Create the empty list
   particles = new ArrayList<Particle>();
-  
+
   int bnote = 0;
   for (int i = 0; i < 52; i++) {
     boundaries.add(new Boundary(width*i/52 + width/104, height - keyLength/2 - 10, width/52, keyLength, bnote, 0)); //white note
@@ -192,7 +192,7 @@ void setup() {
   myBus.sendMessage(0xC1, 1, 117, 00);
   myBus.sendMessage(0xC1, 2, 55, 00);
   myBus.sendMessage(0xC1, 3, 115, 00);
-  myBus.sendMessage(0xC1, 4, 116, 00);
+  myBus.sendMessage(0xC1, 4, 118, 00);
   // myBus.sendMessage(0xC1, 0, instrument, 00); //change instrument
   //myBus.sendMessage(0xC1, 1, 35, 00); //change instrument
 }
@@ -277,7 +277,7 @@ void win() {
     left.enableCollision();
     right.enableCollision();
     hoop.enableCollision();
-    myBus.sendMessage(0xC1, 0, 20, 00);
+    myBus.sendMessage(0xC1, 0, 18, 00);
   } else if (gameMode == 2) { //basektball
     for (int i = particles.size()-1; i >= 0; i--) {
       Particle p = particles.get(i);
@@ -293,11 +293,17 @@ void win() {
     }
     for (int i = 0; i < boundaries.size(); i++) {
       Boundary b = boundaries.get(i);
-      b.enableCollision();
+      if (i > 92) {
+        b.killBody();
+        boundaries.remove(i);
+        i--;
+      } else {
+        b.enableCollision();
+      }
     }
     gameMode = -1;
     myBus.sendMessage(0xC1, 0, 0, 00);
-    for(int i = 0; i < balls.size(); i++){
+    for (int i = 0; i < balls.size(); i++) {
       Ball b = balls.get(i);
       b.killBody();
       balls.remove(i);
@@ -311,6 +317,7 @@ void win() {
   for (int i = 0; i < keys.size(); i++) {
     Key k = keys.get(i);
     k.unPress(i);
+    myBus.sendNoteOff(0, i+21, 60);
   }
   sustain = false;
   gameMode ++;
@@ -327,7 +334,7 @@ void draw() {
   if (guide) {
     background(0, 255, 255);
     fill(0);
-    rect(5, 5, width - 10, height - 10);
+    rect(5, 5, width - 10, height - keyLength - 10);
   }
 
   if (gameMode == 0) {
@@ -390,7 +397,7 @@ void draw() {
         if (sustain) {
           targetBallVelocity = 20;
         } else {
-          targetBallVelocity = 70;
+          targetBallVelocity = 50;
         }
         float vel_adj = targetBallVelocity/vel;
         b.setVelocity(new Vec2(vel_adj*vel2.x, vel_adj*vel2.y));
@@ -406,14 +413,13 @@ void draw() {
       deadt --;
       fill(0);
       stroke(255);
-      rect(deadx + (-10 + random(20))*deadt/50 - width/32, deady + (-10 + random(20))*deadt/50 - width/104, width/16, width/52);
+      rect(deadx + (-10 + random(20))*deadt/20 - width/32, deady + (-10 + random(20))*deadt/20 - width/104, width/16, width/52);
       blendMode(BLEND);
     }
   }
 
   // We must always step through time!
   box2d.step();
-  println(balls.size());
   // Display all the boundaries
   for (int i = 0; i < boundaries.size(); i++) {
     Boundary b = boundaries.get(i);
@@ -424,8 +430,8 @@ void draw() {
         b.display();
       }
     }
-    if(gameMode == 2){
-     b.display(); 
+    if (gameMode == 2) {
+      b.display();
     }
   }
 

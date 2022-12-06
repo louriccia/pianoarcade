@@ -58,10 +58,17 @@ class Boundary {
   void setposition(float x, float y) {
     Vec2 pos = body.getWorldCenter();
     Vec2 target = box2d.coordPixelsToWorld(x, y);
-    Vec2 diff = new Vec2(target.x-pos.x, target.y-pos.y);
-    diff.mulLocal(50);
-    setVelocity(diff);
-    setAngularVelocity(0);
+    //if (gameMode == 3) {
+      Vec2 diff = new Vec2((target.x-pos.x)*2.2, (target.y-pos.y)*2.2);
+      diff.mulLocal(50);
+      setVelocity(diff);
+      setAngularVelocity(0);
+    //} else {
+    //  Vec2 diff = new Vec2((target.x-pos.x), (target.y-pos.y));
+    //  diff.mulLocal(50);
+    //  setVelocity(diff);
+    //  setAngularVelocity(0);
+    //}
   }
 
   int getKey() {
@@ -79,16 +86,16 @@ class Boundary {
   int getHit() {
     return hit;
   }
-  
-  float getx(){
-   return x;
+
+  float getx() {
+    return x;
   }
-  
-  int getType(){
-     return type; 
+
+  int getType() {
+    return type;
   }
-  
-  float gety(){
+
+  float gety() {
     return y;
   }
 
@@ -117,9 +124,9 @@ class Boundary {
         if (hit > 0) {
           fill(255);
           //fill(map(hit, 0, 50, 0, 255));
-        } else if(gameMode == 2){
+        } else if (gameMode == 2) {
           fill(255);
-        }else {
+        } else {
           fill(type*80, 255, 255);
         }
         stroke(0);

@@ -10,9 +10,17 @@ void midiMessage(MidiMessage message, long timestamp, String bus_name) {
       k.Press(n, vel);
       keysPressed++;
       activeNotes ++;
-      if (gameMode !=3 || (gameMode == 3 && keys.get(n).disabled())) {
-        myBus.sendNoteOn(0, n+21, vel);
+      if (gameMode == 3) {
+        for (int i = 0; i < keys.size(); i++) {
+          myBus.sendNoteOff(0, i+21, vel);
+        }
       }
+      if (gameMode !=3) {
+        myBus.sendNoteOn(0, n+21, vel);
+      } else if ((gameMode == 3 && keys.get(n).disabled())){
+          myBus.sendNoteOn(0, n+21, 60);
+      }
+
       //myBus.sendNoteOn(1, n+21, vel);
       if (n == 0) {
         //instrument++;

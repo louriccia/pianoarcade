@@ -73,11 +73,11 @@ void beginContact(Contact cp) {
         ballqueue.add(ball_data);
       }
       if (p1.getType() == 0) {
-        myBus.sendNoteOn(1, round(random(50))+ 40, 80);
+        myBus.sendNoteOn(1, round(random(50))+ 40, round(40 + random(20)));
       } else if (p1.getType() == 1) {
-        myBus.sendNoteOn(3, round(random(50))+ 40, 80);
+        myBus.sendNoteOn(3, round(random(50))+ 40, round(40 + random(20)));
       } else if (p1.getType() == 2) {
-        myBus.sendNoteOn(4, round(random(50))+ 40, 80);
+        myBus.sendNoteOn(4, round(random(50))+ 40, round(40 + random(20)));
       }
       p1.delete();
     }
@@ -106,6 +106,12 @@ void endContact(Contact cp) {
         myBus.sendNoteOff(0, hitkey+21, 0);
         keys.get(hitkey).unPress(hitkey);
       }
+    }
+  } else if (o1.getClass() == Boundary.class && o2.getClass() == Ball.class && gameMode == 3) { //breakout ball hits block
+    Boundary p1 = (Boundary) o1;
+    int hitkey = p1.getKey();
+    if (hitkey >= 0 && hitkey < 88) { //hits key
+      myBus.sendNoteOff(0, hitkey+21, 60);
     }
   }
 }
