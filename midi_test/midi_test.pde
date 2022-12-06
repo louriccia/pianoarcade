@@ -15,41 +15,42 @@ import spout.*;
 Boolean guide = false;
 PImage bball;
 PImage bballhoop;
-
-
 Spout spout;
 Box2DProcessing box2d;
+MidiBus myBus;
+int midiINDevice  = 1;
+int midiOUTDevice = 4;
+
+//shapes
 PShape leftKey;
 PShape rightKey;
 PShape midKey;
 PShape midKeyRight;
 PShape midKeyLeft;
+
+//arraylists
 ArrayList<Key> keys = new ArrayList<Key>();
-// A list we'll use to track fixed objects
 ArrayList<Boundary> boundaries;
-// A list for all of our rectangles
 ArrayList<Box> boxes;
 ArrayList<Particle> particles;
 ArrayList<Ball> balls;
 ArrayList<FloatList> queue;
 ArrayList<FloatList> ballqueue;
-//Spring spring;
-MidiBus myBus;
 
-boolean reset = false;
-int midiINDevice  = 1;
-int midiOUTDevice = 4;
+//keyboard parameters
 float keyLength = 165;
 float blackWidth = 13;
 float blackLength = .66;
 float blackIntrude = .66;
-int instrument = 0;
 float pitchBender = 64;
 boolean sustain = false;
-boolean breakoutwin = false;
-int keysPressed = 0;
 int activeNotes = 0;
+int keysPressed = 0;
+
+//game parameters
 int gameMode = 0;
+int passiveWin = 800;
+boolean breakoutwin = false;
 Boundary hoop;
 Boundary lower;
 Boundary upper;
@@ -57,35 +58,35 @@ Boundary left;
 Boundary right;
 float hoopx = 0;
 float hoopy = width/2;
-int direction = -1;
+int hoopdirection = -1;
+float paddleX = 0;
+float paddleXTarget = 0;
+float deadx = 0;
+float deady = 0;
+float deadt = 0;
+boolean reset = false;
+int cheatCooldown = 0;
+float targetBallVelocity = 0;
 float pyth(Vec2 vec) {
   return sqrt(vec.x*vec.x + vec.y*vec.y);
 }
 
-float deadx = 0;
-float deady = 0;
-float deadt = 0;
-
-int cheatCooldown = 0;
-
-float paddleX = 0;
-float paddleXTarget = 0;
-float targetBallVelocity = 0;
-
 void setup() {
   size(1200, 1050, P3D);
   smooth();
+  
+  //load images
   bball = loadImage("bball-01.png");
   bballhoop = loadImage("bball-02.png");
+  
+  //set up spout
   spout = new Spout(this);
   spout.createSender("midi_test", width, height);
-  // Initialize box2d physics and create the world
+
+  //set up box2d
   box2d = new Box2DProcessing(this);
   box2d.createWorld();
-
-  // Turn on collision listening!
   box2d.listenForCollisions();
-  // We are setting a custom gravity
   box2d.setGravity(0, 10);
 
   // Create ArrayLists
@@ -94,9 +95,9 @@ void setup() {
   ballqueue = new ArrayList<FloatList>();
   balls = new ArrayList<Ball>();
   boundaries = new ArrayList<Boundary>();
-  // Create the empty list
   particles = new ArrayList<Particle>();
 
+  //set up key boundaries
   int bnote = 0;
   for (int i = 0; i < 52; i++) {
     boundaries.add(new Boundary(width*i/52 + width/104, height - keyLength/2 - 10, width/52, keyLength, bnote, 0)); //white note
@@ -107,26 +108,26 @@ void setup() {
     }
   }
 
+  //set up boundaries
   hoop = new Boundary(width/2, height/2, width/20, 20, -1, 0);
-  boundaries.add(hoop);
-  // Add a bunch of fixed boundaries
   left = new Boundary(-4, height/2, 8, height, -1, 0);
   upper = new Boundary(width/2, -4, width, 8, -1, 0);
   lower = new Boundary(width/2, height + 4, width, 8, -1, 0);
   right = new Boundary(width + 4, height/2, 8, height, -1, 0);
+  boundaries.add(hoop);
   boundaries.add(upper);
   boundaries.add(lower);
   boundaries.add(left);
   boundaries.add(right);
 
-  //boundaries.add(new Boundary(3*width/4,height-keyLength,width/2-50,10));
-
+  //set up virtual keys
   MidiBus.list();
-  background(0);
   myBus = new MidiBus(this, midiINDevice, midiOUTDevice);
   for (int i = 0; i < 88; i ++) {
     keys.add(new Key());
   }
+  
+  //define shapes for keys
   leftKey = createShape();
   leftKey.beginShape();
   leftKey.vertex(0, 0);
@@ -188,13 +189,14 @@ void setup() {
   midKeyLeft.endShape(CLOSE);
   midKeyLeft.disableStyle();
 
-  myBus.sendMessage(0xC1, 0, instrument, 00);
+  //set up instruments
+  myBus.sendMessage(0xC1, 0, 0, 00);
   myBus.sendMessage(0xC1, 1, 117, 00);
   myBus.sendMessage(0xC1, 2, 55, 00);
   myBus.sendMessage(0xC1, 3, 115, 00);
   myBus.sendMessage(0xC1, 4, 118, 00);
-  // myBus.sendMessage(0xC1, 0, instrument, 00); //change instrument
-  //myBus.sendMessage(0xC1, 1, 35, 00); //change instrument
+  
+  background(0);
 }
 
 void dim() {
@@ -206,17 +208,22 @@ void dim() {
 }
 
 void resetBreakout() {
+  //delete all balls
   for (int i = 0; i < balls.size(); i++) {
     Ball b = balls.get(i);
     b.killBody();
   }
   balls.clear();
+  
+  //delete all excess boundaries
   for (int i = 93; i < boundaries.size(); i ++) {
     Boundary b = boundaries.get(i);
     b.killBody();
     boundaries.remove(i);
     i--;
   }
+  
+  //generate new level
   int missingrows = round(random(5));
   float cellWidth = width/16;
   float cellHeight = width/52;
@@ -243,15 +250,17 @@ void resetBreakout() {
       }
     }
   }
+  
+  //spawn new ball
   Ball bl = new Ball(width/2, height/2, 10.0);
   balls.add(bl);
+  
+  //reset keys
   for (int i = 0; i < keys.size(); i++) {
     Key k = keys.get(i);
     background(0);
     k.unPress(i);
-  }
-  for (int i = 0; i < keys.size(); i++) {
-    keys.get(i).enableRender();
+    k.enableRender();
   }
   for (int i = 0; i < boundaries.size(); i++) {
     Boundary b = boundaries.get(i);
@@ -310,10 +319,6 @@ void win() {
     }
     background(0);
   }
-  if (gameMode == 5) {
-    gameMode = -1 ;
-    background(0);
-  }
   for (int i = 0; i < keys.size(); i++) {
     Key k = keys.get(i);
     k.unPress(i);
@@ -328,8 +333,6 @@ void draw() {
     resetBreakout();
     reset = false;
   }
-  //background(0);
-  //rect(globalNote*width/88, 300, 20, 100);
 
   if (guide) {
     background(0, 255, 255);
@@ -338,7 +341,7 @@ void draw() {
   }
 
   if (gameMode == 0) {
-    if (keysPressed > 1000) {
+    if (keysPressed > passiveWin) {
       keysPressed = 0;
       win();
     }
@@ -349,7 +352,7 @@ void draw() {
       boxes.add(p);
     }
     queue.clear();
-    if (keysPressed > 1000) {
+    if (keysPressed > passiveWin) {
       keysPressed = 0;
       win();
     }
@@ -357,13 +360,12 @@ void draw() {
     background(0);
     box2d.setGravity(0, -100 + map(pitchBender, 0, 128, -100, 200));
     if (hoopx < 0) {
-      direction = 1;
+      hoopdirection = 1;
     } else if (hoopx > width) {
-      direction = -1;
+      hoopdirection = -1;
     }
     float hoopspeed = 52/max(particles.size(), 1);
-    hoopx += direction * hoopspeed;
-    //hoopy = height/2 + map(pitchBender, 0, 127, height/4, -height/4);
+    hoopx += hoopdirection * hoopspeed;
     hoop.setposition(hoopx, height/2);
     if (particles.size() == 0) {
       win();
@@ -374,18 +376,18 @@ void draw() {
       balls.add(b);
     }
     ballqueue.clear();
+    
+    //dim the screen slowly
     blendMode(SUBTRACT);
     noStroke();
     fill(255, 10);
-    //if (frameCount%32 == 0) {
     rect(0, 0, width, height);
-    //}
     blendMode(BLEND);
+    
     paddleX += (paddleXTarget - paddleX)*0.9;
     fill(0);
     rect(0, height - keyLength - 20, width, 20);
     hoop.setposition(width*paddleX/88, height - keyLength - 10);
-    //background(30);
     box2d.setGravity(0, map(pitchBender, 0, 127, -50, 50));
     for (int i = 0; i < balls.size(); i++) {
       Ball b = balls.get(i);
@@ -408,6 +410,8 @@ void draw() {
       breakoutwin = false;
       win();
     }
+    
+    //animation after a block breaks
     if (deadt > 0 && boundaries.size() > 94) {
       blendMode(ADD);
       deadt --;
@@ -418,9 +422,7 @@ void draw() {
     }
   }
 
-  // We must always step through time!
-  box2d.step();
-  // Display all the boundaries
+  box2d.step(); //step through box2d world
   for (int i = 0; i < boundaries.size(); i++) {
     Boundary b = boundaries.get(i);
     if (b.done()) {
@@ -434,29 +436,19 @@ void draw() {
       b.display();
     }
   }
-
-  // Display all the boxes
-  for (Box b : boxes) {
-    b.display();
-  }
-
-  // Look at all particles
   for (int i = particles.size()-1; i >= 0; i--) {
     Particle p = particles.get(i);
     p.display();
-    // Particles that leave the screen, we delete them
-    // (note they have to be deleted from both the box2d world and our list
     if (p.done()) {
       particles.remove(i);
     }
   }
-
-  // Boxes that leave the screen, we delete them
-  // (note they have to be deleted from both the box2d world and our list
   for (int i = boxes.size()-1; i >= 0; i--) {
     Box b = boxes.get(i);
     if (b.done()) {
       boxes.remove(i);
+    } else {
+      b.display();
     }
   }
 

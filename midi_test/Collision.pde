@@ -6,21 +6,16 @@ void beginContact(Contact cp) {
   // Get both bodies
   Body b1 = f1.getBody();
   Body b2 = f2.getBody();
-
   // Get our objects that reference these bodies
   Object o1 = b1.getUserData();
   Object o2 = b2.getUserData();
 
-  if (o1.getClass() == Boundary.class && o2.getClass() == Box.class) { //physics splashback
+  if (o1.getClass() == Boundary.class && o2.getClass() == Box.class) { //box hits keys
     Boundary p1 = (Boundary) o1;
-    //p1.change();
-
     float vel = pyth(b2.getLinearVelocity());
-    //println(b2.getLinearVelocity().toString(), vel);
     Box p2 = (Box) o2;
     int hitkey = p1.getKey();
     if (p2.getAge() > 10 && hitkey < 88 && hitkey >= 0 && keys.get(hitkey).getCooldown() <= 0) {
-      //p2.change();
       if (hitkey > -1 && pitchBender > 30) {
         keys.get(hitkey).setCooldown(50);
         myBus.sendNoteOn(0, hitkey+21, round(vel));

@@ -21,20 +21,11 @@ void midiMessage(MidiMessage message, long timestamp, String bus_name) {
           myBus.sendNoteOn(0, n+21, 60);
       }
 
-      //myBus.sendNoteOn(1, n+21, vel);
-      if (n == 0) {
-        //instrument++;
-        //reset= true;
-        //myBus.sendMessage(0xC1, 0, instrument, 00);
-      }
       if (gameMode == 2) {
         keys.get(n).setPVelocity(vel);
       }
     } else if (unk == 128) { // NOTE OFF
       try {
-        //if (gameMode == 1) {
-        // k.spawnBox(n);
-        //}
         k.unPress(n);
         activeNotes --;
         myBus.sendNoteOff(0, n+21, vel);
@@ -54,17 +45,8 @@ void midiMessage(MidiMessage message, long timestamp, String bus_name) {
       }
     }
   } else if (unk == 224) { //PITCH BENDER
-    if (vel < 64) {
-      //pitchBender += (64 - vel)/2;
-    } else {
-      //pitchBender -= (vel - 64)/2;
-    }
     pitchBender = vel;
-    //pitchBender = max(0, pitchBender);
-    //pitchBender = min(pitchBender, height - keyLength);
-    //println(pitchBender);
     float gravity = map(pitchBender, 0, 125, -100, 100);
     box2d.setGravity(0, gravity);
   }
-  //println(unk + ": Note "+ note + ", vel " + vel);
 }

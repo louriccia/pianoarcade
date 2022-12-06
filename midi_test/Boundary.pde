@@ -1,7 +1,4 @@
 class Boundary {
-
-  // A boundary is a simple rectangle with x,y,width,and height
-
   Body body;
   float x;
   float y;
@@ -12,7 +9,6 @@ class Boundary {
   int hit = 0;
   int type = 0;
 
-  //Constructor
   Boundary(float x_, float y_, float w_, float h_, int k, int type_) {
     x = x_;
     y = y_;
@@ -38,14 +34,11 @@ class Boundary {
 
   boolean done() {
     if (delete) {
-      //body.getFixtureList().setSensor(true);
       killBody();
       return true;
     }
     return false;
   }
-
-
 
   void disableCollision() {
     body.getFixtureList().setSensor(true);
@@ -58,17 +51,10 @@ class Boundary {
   void setposition(float x, float y) {
     Vec2 pos = body.getWorldCenter();
     Vec2 target = box2d.coordPixelsToWorld(x, y);
-    //if (gameMode == 3) {
       Vec2 diff = new Vec2((target.x-pos.x)*2.2, (target.y-pos.y)*2.2);
       diff.mulLocal(50);
       setVelocity(diff);
       setAngularVelocity(0);
-    //} else {
-    //  Vec2 diff = new Vec2((target.x-pos.x), (target.y-pos.y));
-    //  diff.mulLocal(50);
-    //  setVelocity(diff);
-    //  setAngularVelocity(0);
-    //}
   }
 
   int getKey() {
@@ -99,15 +85,12 @@ class Boundary {
     return y;
   }
 
-  // Draw the boundary, if it were at an angle we'd have to do something fancier
   void display() {
     if (hit > 0) {
       hit --;
     }
     if (!done()) {
-      // We look at each body and get its screen position
       Vec2 pos = box2d.getBodyPixelCoord(body);
-      // Get its angle of rotation
       float a = body.getAngle();
 
       rectMode(PConstants.CENTER);
@@ -119,11 +102,9 @@ class Boundary {
         noStroke();
         bballhoop.resize(141, 159);
         image(bballhoop, -69, -107);
-        //rect(0, 0, w, h);
       } else {
         if (hit > 0) {
           fill(255);
-          //fill(map(hit, 0, 50, 0, 255));
         } else if (gameMode == 2) {
           fill(255);
         } else {
@@ -135,32 +116,25 @@ class Boundary {
       popMatrix();
     } else if (hit > 50) {
       fill(255);
-      //fill(map(hit, 0, 50, 0, 255));
       rect((random(20) - 10)*hit/50, (random(20) - 10)*hit/50, w, h);
     }
   }
 
   void makeBody(Vec2 center, float w_, float h_) {
-    // Create the body
     BodyDef bd = new BodyDef();
     bd.type = BodyType.KINEMATIC;
     bd.position.set(box2d.coordPixelsToWorld(center));
     bd.fixedRotation = true;
     body = box2d.createBody(bd);
-
     PolygonShape ps = new PolygonShape();
     float box2dW = box2d.scalarPixelsToWorld(w_/2);
     float box2dH = box2d.scalarPixelsToWorld(h_/2);
     ps.setAsBox(box2dW, box2dH);
-
-    // Define a fixture
     FixtureDef fd = new FixtureDef();
     fd.shape = ps;
-    // Parameters that affect physics
     fd.density = 1.0;
     fd.friction = 0.5;
     fd.restitution = 0.1;
-
     body.createFixture(fd);
   }
 
