@@ -74,11 +74,11 @@ float pyth(Vec2 vec) {
 void setup() {
   size(1200, 1050, P3D);
   smooth();
-  
+
   //load images
   bball = loadImage("bball-01.png");
   bballhoop = loadImage("bball-02.png");
-  
+
   //set up spout
   spout = new Spout(this);
   spout.createSender("midi_test", width, height);
@@ -126,7 +126,7 @@ void setup() {
   for (int i = 0; i < 88; i ++) {
     keys.add(new Key());
   }
-  
+
   //define shapes for keys
   leftKey = createShape();
   leftKey.beginShape();
@@ -195,7 +195,7 @@ void setup() {
   myBus.sendMessage(0xC1, 2, 55, 00);
   myBus.sendMessage(0xC1, 3, 115, 00);
   myBus.sendMessage(0xC1, 4, 118, 00);
-  
+
   background(0);
 }
 
@@ -214,7 +214,7 @@ void resetBreakout() {
     b.killBody();
   }
   balls.clear();
-  
+
   //delete all excess boundaries
   for (int i = 93; i < boundaries.size(); i ++) {
     Boundary b = boundaries.get(i);
@@ -222,7 +222,7 @@ void resetBreakout() {
     boundaries.remove(i);
     i--;
   }
-  
+
   //generate new level
   int missingrows = round(random(5));
   float cellWidth = width/16;
@@ -250,11 +250,11 @@ void resetBreakout() {
       }
     }
   }
-  
+
   //spawn new ball
   Ball bl = new Ball(width/2, height/2, 10.0);
   balls.add(bl);
-  
+
   //reset keys
   for (int i = 0; i < keys.size(); i++) {
     Key k = keys.get(i);
@@ -345,6 +345,19 @@ void draw() {
       keysPressed = 0;
       win();
     }
+    if (pitchBender < 60) {
+      blendMode(SUBTRACT);
+      noStroke();
+      fill(map(pitchBender, 60, 0, 0, 255), 10);
+      rect(0, 0, width, height);
+      blendMode(BLEND);
+    } else if(pitchBender > 70) {
+      blendMode(ADD);
+      noStroke();
+      fill(map(pitchBender, 70, 125, 0, 255), 10);
+      rect(0, 0, width, height);
+      blendMode(BLEND);
+    }
   } else if (gameMode == 1) {
     background(0);
     for (int i = 0; i < queue.size(); i ++) {
@@ -376,14 +389,14 @@ void draw() {
       balls.add(b);
     }
     ballqueue.clear();
-    
+
     //dim the screen slowly
     blendMode(SUBTRACT);
     noStroke();
     fill(255, 10);
     rect(0, 0, width, height);
     blendMode(BLEND);
-    
+
     paddleX += (paddleXTarget - paddleX)*0.9;
     fill(0);
     rect(0, height - keyLength - 20, width, 20);
@@ -410,7 +423,7 @@ void draw() {
       breakoutwin = false;
       win();
     }
-    
+
     //animation after a block breaks
     if (deadt > 0 && boundaries.size() > 94) {
       blendMode(ADD);

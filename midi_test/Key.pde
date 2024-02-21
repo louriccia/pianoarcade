@@ -84,6 +84,10 @@ class Key {
   void setCooldown(int n) {
     cooldown = n;
   }
+  
+  int getDur(){
+   return dur; 
+  }
 
   void spawnBox(int note) {
     if (dur != 0) {

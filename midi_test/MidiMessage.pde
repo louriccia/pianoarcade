@@ -17,8 +17,8 @@ void midiMessage(MidiMessage message, long timestamp, String bus_name) {
       }
       if (gameMode !=3) {
         myBus.sendNoteOn(0, n+21, vel);
-      } else if ((gameMode == 3 && keys.get(n).disabled())){
-          myBus.sendNoteOn(0, n+21, 60);
+      } else if ((gameMode == 3 && keys.get(n).disabled())) {
+        myBus.sendNoteOn(0, n+21, 60);
       }
 
       if (gameMode == 2) {
@@ -47,6 +47,7 @@ void midiMessage(MidiMessage message, long timestamp, String bus_name) {
   } else if (unk == 224) { //PITCH BENDER
     pitchBender = vel;
     float gravity = map(pitchBender, 0, 125, -100, 100);
+    
     box2d.setGravity(0, gravity);
   }
 }
